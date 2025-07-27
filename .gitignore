@@ -1,0 +1,46 @@
+# sbt-generated files
+.bsp/
+.metals/
+.idea/
+.vscode/
+target/
+project/target/
+project/project/
+.DS_Store
+*.iml
+*.ipr
+*.iws
+out/
+bin/
+test-out/
+
+# Scala-specific
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.gz
+tmp/
+logs/
+
+# Build and dependency caches
+.sbt/
+.ivy2/
+.cache/
+.bloop/
+
+# VSCode-specific
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/*.log
+
+# OS generated files
+.DS_Store
+.Trashes
+ehthumbs.db
+Thumbs.db
+project/metals.sbt
