@@ -21,7 +21,7 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
   def expectedBufr(payload: Chunk[Byte]): Chunk[Byte] =
     bufrHeader ++ payload ++ sentinel
 
-  override def spec: Spec[Any, Throwable] = suite("BufrFrameExtractorSpec")(
+  val extractBUFRwithRandom5kPayload =     
     test("extractBUFR should emit a BUFR message with a 5K random payload") {
       for {
         payload <- randomPayload(5120)
@@ -31,7 +31,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         hasSize(equalTo(1)) &&
         exists(equalTo(expectedBufr(payload)))
       )
-    },
+    }
+
+  val extractBUFRfindsTwoBUFRmessagesBackToBack = 
     test("extractBUFR finds two BUFR messages back-to-back in a stream") {
       for {
         payload1 <- randomPayload(16)
@@ -44,7 +46,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         contains(expectedBufr(payload1)) &&
         contains(expectedBufr(payload2))
       )
-    },
+    }
+
+  val extractBUFRfindsBUFRmessageWithSentinelSplitAcrossChunks =
     test("extractBUFR finds BUFR message with sentinel split across chunks") {
       for {
         payload <- randomPayload(10)
@@ -56,7 +60,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         hasSize(equalTo(1)) &&
         exists(equalTo(bufrHeader ++ payload ++ sentinel))
       )
-    },
+    }
+
+  val ignoresNoiseBeforeAndAfterBUFRmessage  =
     test("Ignores noise before and after a BUFR message") {
       val noise1 = Chunk[Byte](99, 100, 101)
       val noise2 = Chunk[Byte](77, 88)
@@ -67,7 +73,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
       for {
         result <- BufrFrameExtractor.extractBUFR(input).runCollect
       } yield assert(result)(equalTo(Chunk(expectedBufr(payload))))
-    },
+    }
+
+  val ignoresNoiseBetweenTwoBUFRmessages =
     test("Ignores noise between two BUFR messages") {
       val noise = Chunk[Byte](55, 66, 77)
       val payload1 = Chunk[Byte](4, 5, 6)
@@ -82,7 +90,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         contains(expectedBufr(payload1)) &&
         contains(expectedBufr(payload2))
       )
-    },
+    }
+
+  val ignoresPartialBUFRmessages = 
     test("Ignores partial/incomplete BUFR message (no sentinel)") {
       val payload = Chunk[Byte](1, 2, 3)
       val streamData = bufrHeader ++ payload // no sentinel
@@ -91,7 +101,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
       for {
         result <- BufrFrameExtractor.extractBUFR(input).runCollect
       } yield assert(result)(isEmpty)
-    },
+    }
+
+  val ignoresCorruptedHeaderOrSentinel =
     test("Ignores corrupted header or sentinel") {
       val corruptHeader = Chunk('B', 'U', 'F', 'X').map(_.toByte)
       val corruptSentinel = Chunk('7', '7', '7', '8').map(_.toByte)
@@ -104,7 +116,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
       for {
         result <- BufrFrameExtractor.extractBUFR(input).runCollect
       } yield assert(result)(equalTo(Chunk(expectedBufr(payload))))
-    },
+    }
+
+  val handlesEmbeddedHeaderInPayload =
     test("Handles embedded header in payload (should not split)") {
       val payload = Chunk[Byte](1, 2) ++ bufrHeader ++ Chunk[Byte](3, 4)
       val streamData = bufrHeader ++ payload ++ sentinel
@@ -113,7 +127,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
       for {
         result <- BufrFrameExtractor.extractBUFR(input).runCollect
       } yield assert(result)(equalTo(Chunk(expectedBufr(payload))))
-    },
+    }
+
+  val handlesEmbeddedSentinelInPayload =
     test("Handles embedded sentinel in payload (should split)") {
         val payload = Chunk[Byte](1, 2) ++ sentinel ++ Chunk[Byte](3, 4)
         val streamData = bufrHeader ++ payload ++ sentinel
@@ -124,7 +140,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         for {
             result <- BufrFrameExtractor.extractBUFR(input).runCollect
         } yield assert(result)(equalTo(Chunk(expected)))
-    },
+    }
+
+  val backToBackBUFRmessagesWithNoise = 
     test("Back-to-back BUFR messages with noise at start and end") {
       val noise1 = Chunk[Byte](1, 9, 2)
       val noise2 = Chunk[Byte](8, 7)
@@ -140,6 +158,18 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         contains(expectedBufr(payload1)) &&
         contains(expectedBufr(payload2))
       )
-    }
+    }    
+    
+  override def spec: Spec[Any, Throwable] = suite("BufrFrameExtractorSpec")(
+    extractBUFRwithRandom5kPayload,
+    extractBUFRfindsTwoBUFRmessagesBackToBack,
+    extractBUFRfindsBUFRmessageWithSentinelSplitAcrossChunks,
+    ignoresNoiseBeforeAndAfterBUFRmessage,
+    ignoresNoiseBetweenTwoBUFRmessages,
+    ignoresPartialBUFRmessages,
+    ignoresCorruptedHeaderOrSentinel,
+    handlesEmbeddedHeaderInPayload,
+    handlesEmbeddedSentinelInPayload,
+    backToBackBUFRmessagesWithNoise
   )
 }

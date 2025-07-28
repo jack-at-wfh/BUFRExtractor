@@ -6,7 +6,7 @@ import zio.test.Assertion._
 import zio.stream._
 
 object BufrFrameExtractorErrorSpec extends ZIOSpecDefault {
-  override def spec = suite("BufrFrameExtractor error handling")(
+  val extractorFailsStreamWhenInputStreamFails =
     test("Extractor fails the stream when the input stream fails") {
       val stream = ZStream.fromChunk(Chunk[Byte](1,2,3)) ++ ZStream.fail(new RuntimeException("boom!"))
       val result = BufrFrameExtractor.extractBUFR(stream).runCollect.exit
@@ -14,5 +14,7 @@ object BufrFrameExtractorErrorSpec extends ZIOSpecDefault {
         fails(isSubtype[RuntimeException](anything))
       ))
     }
+  override def spec = suite("BufrFrameExtractor error handling")(
+    extractorFailsStreamWhenInputStreamFails
   )
 }
