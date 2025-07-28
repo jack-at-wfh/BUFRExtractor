@@ -158,9 +158,17 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
         contains(expectedBufr(payload1)) &&
         contains(expectedBufr(payload2))
       )
-    }    
-    
-  override def spec: Spec[Any, Throwable] = suite("BufrFrameExtractorSpec")(
+    }
+  val extractBUFRshouldHandleStreamErrors = 
+    test("extractBUFR should handle stream errors") {
+      val failingStream = ZChannel.fail(new RuntimeException("Simulated channel error")).toStream
+      
+      for {
+        result <- BufrFrameExtractor.extractBUFR(failingStream).runCollect.either
+      } yield assertTrue(result.isLeft && result.left.exists(_.getMessage == "Simulated channel error"))
+    }
+
+  def spec: Spec[Any, Throwable] = suite("BufrFrameExtractorSpec")(
     extractBUFRwithRandom5kPayload,
     extractBUFRfindsTwoBUFRmessagesBackToBack,
     extractBUFRfindsBUFRmessageWithSentinelSplitAcrossChunks,
@@ -170,6 +178,7 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
     ignoresCorruptedHeaderOrSentinel,
     handlesEmbeddedHeaderInPayload,
     handlesEmbeddedSentinelInPayload,
-    backToBackBUFRmessagesWithNoise
+    backToBackBUFRmessagesWithNoise,
+    extractBUFRshouldHandleStreamErrors
   )
 }
