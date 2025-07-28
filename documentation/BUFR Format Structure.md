@@ -94,7 +94,7 @@ The table D entries contain a list of element descriptors, operators, and/or oth
 |      |Bit 2 = 1 Compressed data |
 |      |Bit 2 = 0 Non compressed data |
 |      |Bits 3-8 set to zero ( reserved) |
-|8-    |A collection of element descriptors, replication descriptors, operator descrip￾tors and sequence descriptors, which define the form and contents of individ￾ual data elements comprising one data subset in the data section. |
+|8-    |A collection of element descriptors, replication descriptors, operator descriptors and sequence descriptors, which define the form and contents of individual data elements comprising one data subset in the data section. |
 |
 
 ## Section 4 - DATA SECTION
