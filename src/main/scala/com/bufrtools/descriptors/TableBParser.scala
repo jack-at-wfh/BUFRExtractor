@@ -34,20 +34,26 @@ case class TableBEntry(
 ) {
   def isOperational: Boolean = status.equalsIgnoreCase("Operational")
   
-  // Extract F, X, Y from FXY code
+  /**
+   * Extracts F, X, Y components from a 6-character string code.
+   * Returns Some(DescriptorCode) if parsing is successful and the string has the correct length,
+   * otherwise returns None.
+   */
   def descriptorCode: Option[DescriptorCode] = {
-    if (fxyCode.length == 6) {
-      try {
-        val f = fxyCode.substring(0, 1).toInt  // F is single digit
-        val x = fxyCode.substring(1, 3).toInt  // X is 2 digits  
-        val y = fxyCode.substring(3, 6).toInt  // Y is 3 digits
-        Some(DescriptorCode(f, x, y))
-      } catch {
-        case _: NumberFormatException => None
-      }
-    } else None
+    // Use Option.when to only proceed if the length is exactly 6
+    Option.when(fxyCode.length == 6) {
+      // Use a for-comprehension over Option to safely parse each part.
+      // If any substring fails to parse to an Int (e.g., "0A1002"),
+      // toIntOption will return None, and the entire for-comprehension
+      // will short-circuit to None.
+      for {
+        f <- fxyCode.substring(0, 1).toIntOption // F is single digit
+        x <- fxyCode.substring(1, 3).toIntOption // X is 2 digits
+        y <- fxyCode.substring(3, 6).toIntOption // Y is 3 digits
+      } yield DescriptorCode(f, x, y)
+    }.flatten // Flatten Option[Option[DescriptorCode]] to Option[DescriptorCode]
   }
-  
+
   // Helper methods for data interpretation
   def actualValue(encodedValue: Long): Double = {
     (encodedValue + referenceValue) * math.pow(10, -scale)
@@ -69,37 +75,134 @@ case class TableBParseError(message: String) extends Exception {
 }
 
 // Enhanced CSV parser that handles quoted fields and escaped commas
-object CSVParser {
-  def parseLine(line: String): Array[String] = {
-    val result = scala.collection.mutable.ArrayBuffer[String]()
-    var current = new StringBuilder()
-    var inQuotes = false
-    var i = 0
+// object CSVParser {
+//   def parseLine(line: String): Array[String] = {
+//     val result = scala.collection.mutable.ArrayBuffer[String]()
+//     var current = new StringBuilder()
+//     var inQuotes = false
+//     var i = 0
     
-    while (i < line.length) {
-      val char = line.charAt(i)
+//     while (i < line.length) {
+//       val char = line.charAt(i)
       
-      char match {
-        case '"' if i == 0 || line.charAt(i - 1) == ',' =>
-          inQuotes = true
-        case '"' if inQuotes && (i == line.length - 1 || line.charAt(i + 1) == ',') =>
-          inQuotes = false
-        case '"' if inQuotes && i < line.length - 1 && line.charAt(i + 1) == '"' =>
-          current.append('"')
-          i += 1 // Skip next quote
-        case ',' if !inQuotes =>
-          result += current.toString().trim
-          current.clear()
-        case _ =>
-          current.append(char)
-      }
-      i += 1
-    }
+//       char match {
+//         case '"' if i == 0 || line.charAt(i - 1) == ',' => inQuotes = true
+//         case '"' if inQuotes && (i == line.length - 1 || line.charAt(i + 1) == ',') => inQuotes = false
+//         case '"' if inQuotes && i < line.length - 1 && line.charAt(i + 1) == '"' =>  current.append('"'); i += 1 // Skip next quote
+//         case ',' if !inQuotes =>  result += current.toString().trim; current.clear()
+//         case _ =>  current.append(char)
+//       }
+//       i += 1
+//     }
     
-    result += current.toString().trim
-    result.toArray
+//     result += current.toString().trim
+//     result.toArray
+//   }
+// }
+
+object CSVParser {
+
+  /**
+   * Parses a single CSV line into an Array of String fields.
+   * Handles quoted fields and escaped double quotes within fields ("").
+   * Trims whitespace from unquoted fields.
+   *
+   * This implementation uses a tail-recursive approach for functional style
+   * while managing the parsing state explicitly.
+   *
+   * @param line The CSV line to parse.
+   * @return An Array of strings representing the parsed fields.
+   */
+  def parseLine(line: String): Array[String] = {
+
+    // Handle empty line explicitly. An empty line should result in an empty array of fields.
+    if (line.isEmpty) return Array.empty[String]
+
+    // Tail-recursive helper function to process the line character by character.
+    // @scala.annotation.tailrec ensures the compiler optimizes this recursion
+    // into a loop, preventing StackOverflowErrors for long lines.
+    @scala.annotation.tailrec
+    def loop(
+        idx: Int, // Current index in the input 'line' string
+        currentFieldChars: List[Char], // Accumulator for characters in the current field (immutable)
+        inQuotes: Boolean, // Flag to indicate if currently inside a quoted field
+        completedFields: List[String] // Accumulator for fields that have been fully parsed (immutable)
+    ): List[String] = {
+      // Base case: End of the line has been reached.
+      if (idx >= line.length) {
+        // The last accumulated field needs to be added to the list.
+        // We prepend to `completedFields` for efficiency during recursion (List.:: is O(1)),
+        // so we reverse at the very end to get the correct order.
+        (currentFieldChars.mkString.trim :: completedFields).reverse
+      } else {
+        // Get the current character at the current index.
+        val char = line.charAt(idx)
+
+        char match {
+          case '"' =>
+            if (inQuotes) {
+              // Case 1: We are currently inside a quoted field.
+              // Check if the next character is also a double quote (escaped quote: "").
+              if (idx + 1 < line.length && line.charAt(idx + 1) == '"') {
+                // It's an escaped double quote (""). Append a single quote to the field
+                // and advance the index by 2 (to skip both quotes).
+                loop(idx + 2, currentFieldChars :+ '"', inQuotes, completedFields)
+              } else {
+                // It's an unescaped double quote, meaning the end of the quoted field.
+                // The current field is still being built, but we are no longer in quotes.
+                // Advance the index by 1.
+                loop(idx + 1, currentFieldChars, false, completedFields)
+              }
+            } else {
+              // Case 2: We are NOT in quotes. This quote must be the start of a quoted field.
+              // Based on the original logic: `if (i == 0 || line.charAt(i - 1) == ',')`
+              // This implies quotes only begin a field. If `currentFieldChars` is not empty,
+              // it means a quote appeared in the middle of an unquoted field, which is
+              // often considered malformed CSV or just a literal quote character.
+              // Sticking to the original logic's intent: if it's the start of a field,
+              // toggle `inQuotes` to true. Otherwise, treat it as a literal character.
+              if (currentFieldChars.isEmpty || (idx > 0 && line.charAt(idx - 1) == ',')) {
+                // This quote marks the beginning of a quoted field.
+                // Advance the index by 1, and set `inQuotes` to true.
+                loop(idx + 1, currentFieldChars, true, completedFields)
+              } else {
+                // This quote is not at the start of a field, so treat it as a literal character.
+                // Append it to the current field and advance the index by 1.
+                loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
+              }
+            }
+
+          case ',' =>
+            if (inQuotes) {
+              // Case 3: Comma inside quotes is part of the field content.
+              // Append the comma to the current field and advance the index by 1.
+              loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
+            } else {
+              // Case 4: Comma outside quotes is a delimiter.
+              // Complete the current field by converting `currentFieldChars` to a String and trimming.
+              // Prepend this completed field to `completedFields`.
+              // Reset `currentFieldChars` for the next field.
+              // Ensure `inQuotes` is false for the new field.
+              // Advance the index by 1.
+              val field = currentFieldChars.mkString.trim
+              loop(idx + 1, List.empty[Char], false, field :: completedFields)
+            }
+
+          case _ =>
+            // Case 5: Any other character.
+            // Append the character to the current field and advance the index by 1.
+            loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
+        }
+      }
+    }
+
+    // Initiate the recursive parsing loop with the initial state:
+    // Start at index 0, with an empty current field, not in quotes, and no completed fields yet.
+    loop(0, List.empty[Char], false, List.empty[String]).toArray
   }
 }
+
+
 
 // Parser for Table B CSV
 object TableBParser {
