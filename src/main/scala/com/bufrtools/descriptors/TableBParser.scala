@@ -3,7 +3,7 @@ package com.bufrtools.descriptors
 import zio._
 import zio.stream._
 import java.io.InputStream
-import scala.util.{Try, Using}
+import scala.util.Using
 
 // Descriptor code representation
 case class DescriptorCode(f: Int, x: Int, y: Int) {
@@ -73,32 +73,6 @@ case class TableBEntry(
 case class TableBParseError(message: String) extends Exception {
   override def getMessage: String = s"Table B Parse Error: $message"
 }
-
-// Enhanced CSV parser that handles quoted fields and escaped commas
-// object CSVParser {
-//   def parseLine(line: String): Array[String] = {
-//     val result = scala.collection.mutable.ArrayBuffer[String]()
-//     var current = new StringBuilder()
-//     var inQuotes = false
-//     var i = 0
-    
-//     while (i < line.length) {
-//       val char = line.charAt(i)
-      
-//       char match {
-//         case '"' if i == 0 || line.charAt(i - 1) == ',' => inQuotes = true
-//         case '"' if inQuotes && (i == line.length - 1 || line.charAt(i + 1) == ',') => inQuotes = false
-//         case '"' if inQuotes && i < line.length - 1 && line.charAt(i + 1) == '"' =>  current.append('"'); i += 1 // Skip next quote
-//         case ',' if !inQuotes =>  result += current.toString().trim; current.clear()
-//         case _ =>  current.append(char)
-//       }
-//       i += 1
-//     }
-    
-//     result += current.toString().trim
-//     result.toArray
-//   }
-// }
 
 object CSVParser {
 
@@ -291,10 +265,8 @@ object TableBParser {
     for {
       content <- ZIO.attemptBlocking {
                   Option(getClass.getResourceAsStream(resourcePath)) match {
-                    case Some(inputStream) =>
-                      Using(scala.io.Source.fromInputStream(inputStream, "UTF-8"))(_.mkString).get
-                    case None =>
-                      throw new RuntimeException(s"Resource not found: $resourcePath")
+                    case Some(inputStream) => Using(scala.io.Source.fromInputStream(inputStream, "UTF-8"))(_.mkString).get
+                    case None => throw new RuntimeException(s"Resource not found: $resourcePath")
                   }
                 }.mapError(e => TableBParseError(s"Failed to load resource $resourcePath: ${e.getMessage}"))
       entries <- parseTableBContent(content)
@@ -366,18 +338,47 @@ case class TableBStatistics(
   unitCounts: Map[String, Int]
 )
 
-// Companion object for DescriptorCode
+// Companion object for DescriptorCode, providing factory methods.
 object DescriptorCode {
+  /**
+   * Parses a 6-character string representation of an FXY code into a DescriptorCode.
+   *
+   * The input string is expected to be in the format "FXXYYY", where:
+   * - F is a single digit (octet 0)
+   * - X is two digits (octets 1-2)
+   * - Y is three digits (octets 3-5)
+   *
+   * Returns Some(DescriptorCode) if the string has the correct length (6 characters)
+   * and all parts can be successfully parsed as integers. Otherwise, returns None.
+   *
+   * @param fxyCode The 6-character string representing the FXY code.
+   * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
+   */
   def fromFXY(fxyCode: String): Option[DescriptorCode] = {
-    if (fxyCode.length == 6) {
-      Try {
-        val f = fxyCode.substring(0, 1).toInt  // F is single digit
-        val x = fxyCode.substring(1, 3).toInt  // X is 2 digits
-        val y = fxyCode.substring(3, 6).toInt  // Y is 3 digits
-        DescriptorCode(f, x, y)
-      }.toOption
-    } else None
+    // Use Option.when to only proceed if the length is exactly 6.
+    // If the length is not 6, Option.when returns None immediately.
+    Option.when(fxyCode.length == 6) {
+      // Use a for-comprehension over Option to safely parse each part.
+      // String.toIntOption returns Some(Int) on success, None on NumberFormatException.
+      // If any of these parsing steps results in None, the entire for-comprehension
+      // will short-circuit and return None.
+      for {
+        f <- fxyCode.substring(0, 1).toIntOption // F is single digit (e.g., "0" from "012345")
+        x <- fxyCode.substring(1, 3).toIntOption // X is 2 digits (e.g., "12" from "012345")
+        y <- fxyCode.substring(3, 6).toIntOption // Y is 3 digits (e.g., "345" from "012345")
+      } yield DescriptorCode(f, x, y)
+    }.flatten // Flatten Option[Option[DescriptorCode]] to Option[DescriptorCode]
   }
-  
+
+  /**
+   * Provides a convenient way to create a DescriptorCode from a 6-character FXY string.
+   * This is an alias for `fromFXY`.
+   *
+   * Example:
+   * `DescriptorCode("001002")` will attempt to parse the code.
+   *
+   * @param fxyCode The 6-character string representing the FXY code.
+   * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
+   */
   def apply(fxyCode: String): Option[DescriptorCode] = fromFXY(fxyCode)
 }
