@@ -62,7 +62,7 @@ This section contains information relevant to data recognition without performin
 The presence of Section 2 of the Bufr message is indicated by a flag in the 8th byte of Section 1. This section can be used locally by Automated Data Processing centres. This Section is used to keep the Report Data Base key.
 The layout of Section 2 is given in table 3.
 
-### Table 3: Bufr Section - 3
+### Table 3: Bufr Section - 2
 |Octet |Content |
 |:---- |:-----------|
 |1-3   |Length of section in bytes |

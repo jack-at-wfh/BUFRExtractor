@@ -45,3 +45,10 @@ ehthumbs.db
 Thumbs.db
 project/metals.sbt
 desktop.ini
+src/main/resources/bufr-tables/BUFR_TableA_en.txt
+src/main/resources/bufr-tables/BUFR_TableC_en.txt
+src/main/resources/bufr-tables/BUFR_TableD_en.txt
+src/main/resources/bufr-tables/BUFRCREX_CodeFlag_en.txt
+src/main/resources/bufr-tables/CREX_TableA_en.txt
+src/main/resources/bufr-tables/CREX_TableC_en.txt
+src/main/resources/bufr-tables/CREX_TableD_en.txt

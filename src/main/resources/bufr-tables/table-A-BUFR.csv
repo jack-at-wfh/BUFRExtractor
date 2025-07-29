@@ -1,0 +1,257 @@
+CodeFigure,Meaning_en,Status
+0,Surface data - land,Operational
+1,Surface data - sea,Operational
+2,Vertical soundings (other than satellite),Operational
+3,Vertical soundings (satellite),Operational
+4,Single level upper-air data (other than satellite),Operational
+5,Single level upper-air data (satellite),Operational
+6,Radar data,Operational
+7,Synoptic features,Operational
+8,Physical/chemical constituents,Operational
+9,Dispersal and transport,Operational
+10,Radiological data,Operational
+11,"BUFR tables, complete replacement or update",Operational
+12,Surface data (satellite),Operational
+13,Forecasts,Operational
+14,Warnings,Operational
+15,Reserved,Operational
+16,Reserved,Operational
+17,Reserved,Operational
+18,Reserved,Operational
+19,Reserved,Operational
+20,Status information,Operational
+21,Radiances (satellite measured),Operational
+22,Radar (satellite) but not altimeter and scatterometer,Operational
+23,Lidar (satellite),Operational
+24,Scatterometry (satellite),Operational
+25,Altimetry (satellite),Operational
+26,Spectrometry (satellite),Operational
+27,Gravity measurement (satellite),Operational
+28,Precision orbit (satellite),Operational
+29,Space environment (satellite),Operational
+30,Calibration datasets (satellite),Operational
+31,Oceanographic data,Operational
+32,Lidar (ground-based),Operational
+33,Reserved,Operational
+34,Reserved,Operational
+35,Reserved,Operational
+36,Reserved,Operational
+37,Reserved,Operational
+38,Reserved,Operational
+39,Reserved,Operational
+40,Reserved,Operational
+41,Reserved,Operational
+42,Reserved,Operational
+43,Reserved,Operational
+44,Reserved,Operational
+45,Reserved,Operational
+46,Reserved,Operational
+47,Reserved,Operational
+48,Reserved,Operational
+49,Reserved,Operational
+50,Reserved,Operational
+51,Reserved,Operational
+52,Reserved,Operational
+53,Reserved,Operational
+54,Reserved,Operational
+55,Reserved,Operational
+56,Reserved,Operational
+57,Reserved,Operational
+58,Reserved,Operational
+59,Reserved,Operational
+60,Reserved,Operational
+61,Reserved,Operational
+62,Reserved,Operational
+63,Reserved,Operational
+64,Reserved,Operational
+65,Reserved,Operational
+66,Reserved,Operational
+67,Reserved,Operational
+68,Reserved,Operational
+69,Reserved,Operational
+70,Reserved,Operational
+71,Reserved,Operational
+72,Reserved,Operational
+73,Reserved,Operational
+74,Reserved,Operational
+75,Reserved,Operational
+76,Reserved,Operational
+77,Reserved,Operational
+78,Reserved,Operational
+79,Reserved,Operational
+80,Reserved,Operational
+81,Reserved,Operational
+82,Reserved,Operational
+83,Reserved,Operational
+84,Reserved,Operational
+85,Reserved,Operational
+86,Reserved,Operational
+87,Reserved,Operational
+88,Reserved,Operational
+89,Reserved,Operational
+90,Reserved,Operational
+91,Reserved,Operational
+92,Reserved,Operational
+93,Reserved,Operational
+94,Reserved,Operational
+95,Reserved,Operational
+96,Reserved,Operational
+97,Reserved,Operational
+98,Reserved,Operational
+99,Reserved,Operational
+100,Reserved,Operational
+101,Image data (satellite),Operational
+102,Reserved,Operational
+103,Reserved,Operational
+104,Reserved,Operational
+105,Reserved,Operational
+106,Reserved,Operational
+107,Reserved,Operational
+108,Reserved,Operational
+109,Reserved,Operational
+110,Reserved,Operational
+111,Reserved,Operational
+112,Reserved,Operational
+113,Reserved,Operational
+114,Reserved,Operational
+115,Reserved,Operational
+116,Reserved,Operational
+117,Reserved,Operational
+118,Reserved,Operational
+119,Reserved,Operational
+120,Reserved,Operational
+121,Reserved,Operational
+122,Reserved,Operational
+123,Reserved,Operational
+124,Reserved,Operational
+125,Reserved,Operational
+126,Reserved,Operational
+127,Reserved,Operational
+128,Reserved,Operational
+129,Reserved,Operational
+130,Reserved,Operational
+131,Reserved,Operational
+132,Reserved,Operational
+133,Reserved,Operational
+134,Reserved,Operational
+135,Reserved,Operational
+136,Reserved,Operational
+137,Reserved,Operational
+138,Reserved,Operational
+139,Reserved,Operational
+140,Reserved,Operational
+141,Reserved,Operational
+142,Reserved,Operational
+143,Reserved,Operational
+144,Reserved,Operational
+145,Reserved,Operational
+146,Reserved,Operational
+147,Reserved,Operational
+148,Reserved,Operational
+149,Reserved,Operational
+150,Reserved,Operational
+151,Reserved,Operational
+152,Reserved,Operational
+153,Reserved,Operational
+154,Reserved,Operational
+155,Reserved,Operational
+156,Reserved,Operational
+157,Reserved,Operational
+158,Reserved,Operational
+159,Reserved,Operational
+160,Reserved,Operational
+161,Reserved,Operational
+162,Reserved,Operational
+163,Reserved,Operational
+164,Reserved,Operational
+165,Reserved,Operational
+166,Reserved,Operational
+167,Reserved,Operational
+168,Reserved,Operational
+169,Reserved,Operational
+170,Reserved,Operational
+171,Reserved,Operational
+172,Reserved,Operational
+173,Reserved,Operational
+174,Reserved,Operational
+175,Reserved,Operational
+176,Reserved,Operational
+177,Reserved,Operational
+178,Reserved,Operational
+179,Reserved,Operational
+180,Reserved,Operational
+181,Reserved,Operational
+182,Reserved,Operational
+183,Reserved,Operational
+184,Reserved,Operational
+185,Reserved,Operational
+186,Reserved,Operational
+187,Reserved,Operational
+188,Reserved,Operational
+189,Reserved,Operational
+190,Reserved,Operational
+191,Reserved,Operational
+192,Reserved,Operational
+193,Reserved,Operational
+194,Reserved,Operational
+195,Reserved,Operational
+196,Reserved,Operational
+197,Reserved,Operational
+198,Reserved,Operational
+199,Reserved,Operational
+200,Reserved,Operational
+201,Reserved,Operational
+202,Reserved,Operational
+203,Reserved,Operational
+204,Reserved,Operational
+205,Reserved,Operational
+206,Reserved,Operational
+207,Reserved,Operational
+208,Reserved,Operational
+209,Reserved,Operational
+210,Reserved,Operational
+211,Reserved,Operational
+212,Reserved,Operational
+213,Reserved,Operational
+214,Reserved,Operational
+215,Reserved,Operational
+216,Reserved,Operational
+217,Reserved,Operational
+218,Reserved,Operational
+219,Reserved,Operational
+220,Reserved,Operational
+221,Reserved,Operational
+222,Reserved,Operational
+223,Reserved,Operational
+224,Reserved,Operational
+225,Reserved,Operational
+226,Reserved,Operational
+227,Reserved,Operational
+228,Reserved,Operational
+229,Reserved,Operational
+230,Reserved,Operational
+231,Reserved,Operational
+232,Reserved,Operational
+233,Reserved,Operational
+234,Reserved,Operational
+235,Reserved,Operational
+236,Reserved,Operational
+237,Reserved,Operational
+238,Reserved,Operational
+239,Reserved,Operational
+240,For experimental use,Operational
+241,For experimental use,Operational
+242,For experimental use,Operational
+243,For experimental use,Operational
+244,For experimental use,Operational
+245,For experimental use,Operational
+246,For experimental use,Operational
+247,For experimental use,Operational
+248,For experimental use,Operational
+249,For experimental use,Operational
+250,For experimental use,Operational
+251,For experimental use,Operational
+252,For experimental use,Operational
+253,For experimental use,Operational
+254,For experimental use,Operational
+255,Other category,Operational

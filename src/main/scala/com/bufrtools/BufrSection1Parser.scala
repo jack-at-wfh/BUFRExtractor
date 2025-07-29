@@ -3,7 +3,7 @@ package com.bufrtools
 import zio._
 import zio.stream._
 
-// BUFR Section 1 structure (varies by BUFR edition)
+// BUFR Section 1 structure for Edition 4
 case class BufrSection1(
   sectionLength: Int,              // Length of section in bytes (3 bytes)
   masterTableNumber: Int,          // BUFR master table number (1 byte)
@@ -21,7 +21,7 @@ case class BufrSection1(
   day: Int,                        // Day (1 byte)
   hour: Int,                       // Hour (1 byte)
   minute: Int,                     // Minute (1 byte)
-  second: Option[Int]              // Second (1 byte, only in edition 4+)
+  second: Int                      // Second (1 byte) - always present in Edition 4
 )
 
 // Custom errors for Section 1 parsing
@@ -35,31 +35,33 @@ case class Section1InvalidLength(length: Int, minExpected: Int) extends BufrSect
 case class Section1InvalidDate(year: Int, month: Int, day: Int) extends BufrSection1ParseError {
   override def getMessage: String = s"Section 1: Invalid date $year-$month-$day"
 }
-case class Section1InvalidTime(hour: Int, minute: Int, second: Option[Int]) extends BufrSection1ParseError {
-  override def getMessage: String = s"Section 1: Invalid time $hour:$minute${second.map(s => s":$s").getOrElse("")}"
+case class Section1InvalidTime(hour: Int, minute: Int, second: Int) extends BufrSection1ParseError {
+  override def getMessage: String = s"Section 1: Invalid time $hour:$minute:$second"
 }
 
 object BufrSection1Parser {
   
-  // Parse Section 1 from a Chunk[Byte], requires BUFR edition for proper parsing
-  def parseSection1(data: Chunk[Byte], bufrEdition: Int): IO[BufrSection1ParseError, BufrSection1] = {
+  // Edition 4 minimum length is always 22 bytes
+  private val EDITION4_MIN_LENGTH = 22
+  
+  // Parse Section 1 from a Chunk[Byte] - Edition 4 only
+  def parseSection1(data: Chunk[Byte]): IO[BufrSection1ParseError, BufrSection1] = {
     for {
-      _              <- validateMinimumLength(data, bufrEdition)
+      _              <- validateMinimumLength(data)
       sectionLength  <- extractSectionLength(data)
-      _              <- validateSectionLength(sectionLength, data.length, bufrEdition)
-      section1       <- extractSection1Fields(data, bufrEdition, sectionLength)
+      _              <- validateSectionLength(sectionLength, data.length)
+      section1       <- extractSection1Fields(data, sectionLength)
       _              <- validateDateTime(section1)
     } yield section1
   }
   
   // Create a ZIO Stream transformer
-  def parseSection1Stream(bufrEdition: Int): ZPipeline[Any, BufrSection1ParseError, Chunk[Byte], BufrSection1] =
-    ZPipeline.mapZIO(parseSection1(_, bufrEdition))
+  def parseSection1Stream: ZPipeline[Any, BufrSection1ParseError, Chunk[Byte], BufrSection1] =
+    ZPipeline.mapZIO(parseSection1)
   
-  private def validateMinimumLength(data: Chunk[Byte], bufrEdition: Int): IO[BufrSection1ParseError, Unit] = {
-    val minLength = if (bufrEdition >= 4) 22 else 21 // Edition 4+ has second field
-    if (data.length < minLength)
-      ZIO.fail(Section1InsufficientData(minLength, data.length))
+  private def validateMinimumLength(data: Chunk[Byte]): IO[BufrSection1ParseError, Unit] = {
+    if (data.length < EDITION4_MIN_LENGTH)
+      ZIO.fail(Section1InsufficientData(EDITION4_MIN_LENGTH, data.length))
     else
       ZIO.unit
   }
@@ -73,17 +75,16 @@ object BufrSection1Parser {
       (bytes(2) & 0xFF)
     }
   
-  private def validateSectionLength(sectionLength: Int, dataLength: Int, bufrEdition: Int): IO[BufrSection1ParseError, Unit] = {
-    val minLength = if (bufrEdition >= 4) 22 else 21
-    if (sectionLength < minLength)
-      ZIO.fail(Section1InvalidLength(sectionLength, minLength))
+  private def validateSectionLength(sectionLength: Int, dataLength: Int): IO[BufrSection1ParseError, Unit] = {
+    if (sectionLength < EDITION4_MIN_LENGTH)
+      ZIO.fail(Section1InvalidLength(sectionLength, EDITION4_MIN_LENGTH))
     else if (sectionLength > dataLength)
       ZIO.fail(Section1InsufficientData(sectionLength, dataLength))
     else
       ZIO.unit
   }
   
-  private def extractSection1Fields(data: Chunk[Byte], bufrEdition: Int, sectionLength: Int): IO[Nothing, BufrSection1] =
+  private def extractSection1Fields(data: Chunk[Byte], sectionLength: Int): IO[Nothing, BufrSection1] =
     ZIO.succeed {
       val bytes = data.toArray
       
@@ -102,7 +103,7 @@ object BufrSection1Parser {
       val day = bytes(18) & 0xFF
       val hour = bytes(19) & 0xFF
       val minute = bytes(20) & 0xFF
-      val second = if (bufrEdition >= 4 && sectionLength > 21) Some(bytes(21) & 0xFF) else None
+      val second = bytes(21) & 0xFF // Always present in Edition 4
       
       BufrSection1(
         sectionLength = sectionLength,
@@ -128,8 +129,7 @@ object BufrSection1Parser {
   private def validateDateTime(section1: BufrSection1): IO[BufrSection1ParseError, Unit] = {
     val validDate = section1.month >= 1 && section1.month <= 12 &&
                    section1.day >= 1 && section1.day <= 31
-    val validTime = section1.hour <= 23 && section1.minute <= 59 &&
-                   section1.second.forall(_ <= 59)
+    val validTime = section1.hour <= 23 && section1.minute <= 59 && section1.second <= 59
     
     if (!validDate)
       ZIO.fail(Section1InvalidDate(section1.year, section1.month, section1.day))
