@@ -7,7 +7,7 @@ import scala.util.{Try, Using}
 
 // Descriptor code representation
 case class DescriptorCode(f: Int, x: Int, y: Int) {
-  def toFXY: String = f"$f%02d$x%02d$y%02d"
+  def toFXY: String = f"$f%01d$x%02d$y%03d"
   
   def isElementDescriptor: Boolean = f == 0
   def isReplicationDescriptor: Boolean = f == 1
@@ -38,9 +38,9 @@ case class TableBEntry(
   def descriptorCode: Option[DescriptorCode] = {
     if (fxyCode.length == 6) {
       try {
-        val f = fxyCode.substring(0, 2).toInt
-        val x = fxyCode.substring(2, 4).toInt  
-        val y = fxyCode.substring(4, 6).toInt
+        val f = fxyCode.substring(0, 1).toInt  // F is single digit
+        val x = fxyCode.substring(1, 3).toInt  // X is 2 digits  
+        val y = fxyCode.substring(3, 6).toInt  // Y is 3 digits
         Some(DescriptorCode(f, x, y))
       } catch {
         case _: NumberFormatException => None
@@ -268,9 +268,9 @@ object DescriptorCode {
   def fromFXY(fxyCode: String): Option[DescriptorCode] = {
     if (fxyCode.length == 6) {
       Try {
-        val f = fxyCode.substring(0, 2).toInt
-        val x = fxyCode.substring(2, 4).toInt
-        val y = fxyCode.substring(4, 6).toInt
+        val f = fxyCode.substring(0, 1).toInt  // F is single digit
+        val x = fxyCode.substring(1, 3).toInt  // X is 2 digits
+        val y = fxyCode.substring(3, 6).toInt  // Y is 3 digits
         DescriptorCode(f, x, y)
       }.toOption
     } else None
