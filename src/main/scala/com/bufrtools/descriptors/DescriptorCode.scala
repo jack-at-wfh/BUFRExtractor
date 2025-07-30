@@ -4,6 +4,7 @@ import zio._
 import zio.stream._
 import java.io.InputStream
 import scala.util.Using
+import zio.json.*
 
 // Descriptor code representation
 case class DescriptorCode(f: Int, x: Int, y: Int) {
@@ -31,6 +32,10 @@ object DescriptorCode {
    * @param fxyCode The 6-character string representing the FXY code.
    * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
    */
+
+  implicit val encoder: JsonEncoder[DescriptorCode] = DeriveJsonEncoder.gen[DescriptorCode]
+  implicit val decoder: JsonDecoder[DescriptorCode] = DeriveJsonDecoder.gen[DescriptorCode]
+
   def fromFXY(fxyCode: String): Option[DescriptorCode] = {
     // Use Option.when to only proceed if the length is exactly 6.
     // If the length is not 6, Option.when returns None immediately.

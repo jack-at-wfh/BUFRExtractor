@@ -33,20 +33,20 @@ object CSVParser {
         completedFields: List[String]
     ): List[String] = {
 
-      def finalizeField(chars: List[Char], finalState: ParserState): String = {
+      def finaliseField(chars: List[Char], finalState: ParserState): String = {
         finalState match {
           case InQuotedField | AfterClosingQuote => chars.mkString
           case _                                 => chars.mkString.trim
         }
       }
 
-      def finalizeAndReset(chars: List[Char], currentState: ParserState): (String, List[Char], ParserState) = {
-        val field = finalizeField(chars, currentState)
+      def finaliseAndReset(chars: List[Char], currentState: ParserState): (String, List[Char], ParserState) = {
+        val field = finaliseField(chars, currentState)
         (field, List.empty[Char], InitialField)
       }
 
       if (idx >= line.length) {
-        val finalField = finalizeField(currentFieldChars, state)
+        val finalField = finaliseField(currentFieldChars, state)
         (finalField :: completedFields).reverse
       } else {
         val char = line.charAt(idx)
@@ -59,7 +59,7 @@ object CSVParser {
               case '"' =>
                 loop(idx + 1, List.empty[Char], InQuotedField, completedFields)
               case ',' =>
-                val (field, _, _) = finalizeAndReset(currentFieldChars, InitialField)
+                val (field, _, _) = finaliseAndReset(currentFieldChars, InitialField)
                 loop(idx + 1, List.empty[Char], InitialField, field :: completedFields)
               case _ =>
                 loop(idx + 1, currentFieldChars :+ char, InUnquotedField, completedFields)
@@ -70,7 +70,7 @@ object CSVParser {
               case '"' =>
                 loop(idx + 1, currentFieldChars :+ char, InUnquotedField, completedFields)
               case ',' =>
-                val (field, newChars, newState) = finalizeAndReset(currentFieldChars, InUnquotedField)
+                val (field, newChars, newState) = finaliseAndReset(currentFieldChars, InUnquotedField)
                 loop(idx + 1, newChars, newState, field :: completedFields)
               case _ =>
                 loop(idx + 1, currentFieldChars :+ char, InUnquotedField, completedFields)
@@ -93,7 +93,7 @@ object CSVParser {
               case ' ' | '\t' =>
                 loop(idx + 1, currentFieldChars, AfterClosingQuote, completedFields)
               case ',' =>
-                val (field, newChars, newState) = finalizeAndReset(currentFieldChars, AfterClosingQuote)
+                val (field, newChars, newState) = finaliseAndReset(currentFieldChars, AfterClosingQuote)
                 loop(idx + 1, newChars, newState, field :: completedFields)
               case _ =>
                 loop(idx + 1, currentFieldChars :+ '"' :+ char, InUnquotedField, completedFields)
