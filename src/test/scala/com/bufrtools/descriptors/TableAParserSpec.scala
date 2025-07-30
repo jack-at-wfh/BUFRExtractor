@@ -213,6 +213,19 @@ object TableAParserSpec extends ZIOSpecDefault {
       )
     }
 
+  val loadTableAFromResourceShouldLoadDefaultFile = 
+    test("loadTableAFromResource should load default table A file") {
+      for {
+        result <- TableAParser.loadTableAFromResource()
+      } yield assertTrue(
+        result.nonEmpty &&
+        result.contains(0) &&  // Should have surface data - land
+        result.contains(1) &&  // Should have surface data - sea
+        result.keys.forall(code => code >= 0 && code <= 255)  // All codes should be in valid range
+      )
+    }
+
+
   def spec = suite("TableAParser")(
     shouldParseValidTableALine,
     shouldParseLineWithWhitespace,
@@ -229,6 +242,7 @@ object TableAParserSpec extends ZIOSpecDefault {
     parseTableAStreamShouldFailOnInvalidLine,
     tableAParseErrorShouldFormatMessageCorrectly,
     loadTableAFromResourceShouldFailWithBogusPath,
-    loadTableAFromResourceShouldLoadActualFile
+    loadTableAFromResourceShouldLoadActualFile,
+    loadTableAFromResourceShouldLoadDefaultFile
   )
 }

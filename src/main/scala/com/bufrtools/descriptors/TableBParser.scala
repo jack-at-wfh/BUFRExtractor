@@ -4,16 +4,7 @@ import zio._
 import zio.stream._
 import java.io.InputStream
 import scala.util.Using
-
-// Descriptor code representation
-case class DescriptorCode(f: Int, x: Int, y: Int) {
-  def toFXY: String = f"$f%01d$x%02d$y%03d"
-  
-  def isElementDescriptor: Boolean = f == 0
-  def isReplicationDescriptor: Boolean = f == 1
-  def isOperatorDescriptor: Boolean = f == 2
-  def isSequenceDescriptor: Boolean = f == 3
-}
+import com.bufrtools.csv.*
 
 // Table B entry - Element descriptors  
 case class TableBEntry(
@@ -73,110 +64,6 @@ case class TableBEntry(
 case class TableBParseError(message: String) extends Exception {
   override def getMessage: String = s"Table B Parse Error: $message"
 }
-
-object CSVParser {
-
-  /**
-   * Parses a single CSV line into an Array of String fields.
-   * Handles quoted fields and escaped double quotes within fields ("").
-   * Trims whitespace from unquoted fields.
-   *
-   * This implementation uses a tail-recursive approach for functional style
-   * while managing the parsing state explicitly.
-   *
-   * @param line The CSV line to parse.
-   * @return An Array of strings representing the parsed fields.
-   */
-  def parseLine(line: String): Array[String] = {
-
-    // Handle empty line explicitly. An empty line should result in an empty array of fields.
-    if (line.isEmpty) return Array.empty[String]
-
-    // Tail-recursive helper function to process the line character by character.
-    // @scala.annotation.tailrec ensures the compiler optimizes this recursion
-    // into a loop, preventing StackOverflowErrors for long lines.
-    @scala.annotation.tailrec
-    def loop(
-        idx: Int, // Current index in the input 'line' string
-        currentFieldChars: List[Char], // Accumulator for characters in the current field (immutable)
-        inQuotes: Boolean, // Flag to indicate if currently inside a quoted field
-        completedFields: List[String] // Accumulator for fields that have been fully parsed (immutable)
-    ): List[String] = {
-      // Base case: End of the line has been reached.
-      if (idx >= line.length) {
-        // The last accumulated field needs to be added to the list.
-        // We prepend to `completedFields` for efficiency during recursion (List.:: is O(1)),
-        // so we reverse at the very end to get the correct order.
-        (currentFieldChars.mkString.trim :: completedFields).reverse
-      } else {
-        // Get the current character at the current index.
-        val char = line.charAt(idx)
-
-        char match {
-          case '"' =>
-            if (inQuotes) {
-              // Case 1: We are currently inside a quoted field.
-              // Check if the next character is also a double quote (escaped quote: "").
-              if (idx + 1 < line.length && line.charAt(idx + 1) == '"') {
-                // It's an escaped double quote (""). Append a single quote to the field
-                // and advance the index by 2 (to skip both quotes).
-                loop(idx + 2, currentFieldChars :+ '"', inQuotes, completedFields)
-              } else {
-                // It's an unescaped double quote, meaning the end of the quoted field.
-                // The current field is still being built, but we are no longer in quotes.
-                // Advance the index by 1.
-                loop(idx + 1, currentFieldChars, false, completedFields)
-              }
-            } else {
-              // Case 2: We are NOT in quotes. This quote must be the start of a quoted field.
-              // Based on the original logic: `if (i == 0 || line.charAt(i - 1) == ',')`
-              // This implies quotes only begin a field. If `currentFieldChars` is not empty,
-              // it means a quote appeared in the middle of an unquoted field, which is
-              // often considered malformed CSV or just a literal quote character.
-              // Sticking to the original logic's intent: if it's the start of a field,
-              // toggle `inQuotes` to true. Otherwise, treat it as a literal character.
-              if (currentFieldChars.isEmpty || (idx > 0 && line.charAt(idx - 1) == ',')) {
-                // This quote marks the beginning of a quoted field.
-                // Advance the index by 1, and set `inQuotes` to true.
-                loop(idx + 1, currentFieldChars, true, completedFields)
-              } else {
-                // This quote is not at the start of a field, so treat it as a literal character.
-                // Append it to the current field and advance the index by 1.
-                loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
-              }
-            }
-
-          case ',' =>
-            if (inQuotes) {
-              // Case 3: Comma inside quotes is part of the field content.
-              // Append the comma to the current field and advance the index by 1.
-              loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
-            } else {
-              // Case 4: Comma outside quotes is a delimiter.
-              // Complete the current field by converting `currentFieldChars` to a String and trimming.
-              // Prepend this completed field to `completedFields`.
-              // Reset `currentFieldChars` for the next field.
-              // Ensure `inQuotes` is false for the new field.
-              // Advance the index by 1.
-              val field = currentFieldChars.mkString.trim
-              loop(idx + 1, List.empty[Char], false, field :: completedFields)
-            }
-
-          case _ =>
-            // Case 5: Any other character.
-            // Append the character to the current field and advance the index by 1.
-            loop(idx + 1, currentFieldChars :+ char, inQuotes, completedFields)
-        }
-      }
-    }
-
-    // Initiate the recursive parsing loop with the initial state:
-    // Start at index 0, with an empty current field, not in quotes, and no completed fields yet.
-    loop(0, List.empty[Char], false, List.empty[String]).toArray
-  }
-}
-
-
 
 // Parser for Table B CSV
 object TableBParser {
@@ -337,48 +224,3 @@ case class TableBStatistics(
   classCounts: Map[String, Int],
   unitCounts: Map[String, Int]
 )
-
-// Companion object for DescriptorCode, providing factory methods.
-object DescriptorCode {
-  /**
-   * Parses a 6-character string representation of an FXY code into a DescriptorCode.
-   *
-   * The input string is expected to be in the format "FXXYYY", where:
-   * - F is a single digit (octet 0)
-   * - X is two digits (octets 1-2)
-   * - Y is three digits (octets 3-5)
-   *
-   * Returns Some(DescriptorCode) if the string has the correct length (6 characters)
-   * and all parts can be successfully parsed as integers. Otherwise, returns None.
-   *
-   * @param fxyCode The 6-character string representing the FXY code.
-   * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
-   */
-  def fromFXY(fxyCode: String): Option[DescriptorCode] = {
-    // Use Option.when to only proceed if the length is exactly 6.
-    // If the length is not 6, Option.when returns None immediately.
-    Option.when(fxyCode.length == 6) {
-      // Use a for-comprehension over Option to safely parse each part.
-      // String.toIntOption returns Some(Int) on success, None on NumberFormatException.
-      // If any of these parsing steps results in None, the entire for-comprehension
-      // will short-circuit and return None.
-      for {
-        f <- fxyCode.substring(0, 1).toIntOption // F is single digit (e.g., "0" from "012345")
-        x <- fxyCode.substring(1, 3).toIntOption // X is 2 digits (e.g., "12" from "012345")
-        y <- fxyCode.substring(3, 6).toIntOption // Y is 3 digits (e.g., "345" from "012345")
-      } yield DescriptorCode(f, x, y)
-    }.flatten // Flatten Option[Option[DescriptorCode]] to Option[DescriptorCode]
-  }
-
-  /**
-   * Provides a convenient way to create a DescriptorCode from a 6-character FXY string.
-   * This is an alias for `fromFXY`.
-   *
-   * Example:
-   * `DescriptorCode("001002")` will attempt to parse the code.
-   *
-   * @param fxyCode The 6-character string representing the FXY code.
-   * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
-   */
-  def apply(fxyCode: String): Option[DescriptorCode] = fromFXY(fxyCode)
-}
