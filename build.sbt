@@ -14,6 +14,8 @@ lazy val myZioApp = project
       "dev.zio" %% "zio-test-sbt" % ZIOVersion % Test,
       "dev.zio" %% "zio-logging" % "2.2.3" % Test,
       "dev.zio" %% "zio-logging-slf4j" % "2.2.3" % Test,
+      "dev.zio" %% "zio-json" % "0.7.44",
+      "dev.zio" %% "zio-nio" % "2.0.2",
       "ch.qos.logback" % "logback-classic" % "1.4.14" % Test
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZioTestFramework"),
