@@ -7,6 +7,7 @@ lazy val myZioApp = project
   .settings(
     name := "my-zio-app",
     scalaVersion := Scala3,
+    coverageExcludedPackages := ".*\\$anon\\$.*",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % ZIOVersion,
       "dev.zio" %% "zio-streams" % ZIOVersion,
@@ -20,3 +21,4 @@ lazy val myZioApp = project
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZioTestFramework"),
   )
+  

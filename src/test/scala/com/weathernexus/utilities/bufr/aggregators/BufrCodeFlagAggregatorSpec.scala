@@ -5,6 +5,7 @@ import zio.stream.*
 import zio.test.*
 import zio.test.Assertion.*
 
+import com.weathernexus.utilities.bufr.data.*
 import com.weathernexus.utilities.bufr.parsers.*
 
 object BufrCodeFlagAggregatorSpec extends ZIOSpecDefault {

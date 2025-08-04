@@ -3,23 +3,11 @@ package com.weathernexus.utilities.bufr.parsers
 import zio.*
 import zio.stream.*
 
+import com.weathernexus.utilities.bufr.data.BufrCodeFlag
 import com.weathernexus.utilities.common.io.CSVParser
 import com.weathernexus.utilities.common.io.FileRow
 
 
-
-case class BufrCodeFlag(
-  fxy: String,
-  elementName: String,
-  codeFigure: Int,
-  entryName: String,
-  entryNameSub1: Option[String],
-  entryNameSub2: Option[String],
-  note: Option[String],
-  status: Option[String],
-  sourceFile: String,
-  lineNumber: Int
-)
 
 object BufrParserPipeline {
   

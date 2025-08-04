@@ -7,7 +7,7 @@ import zio.nio.charset.Charset
 import zio.test.*
 import zio.test.Assertion.*
 
-import java.io.IOException      
+import java.io.IOException
 
 object FileToRowsPipelineSpec extends ZIOSpecDefault {
 
@@ -16,10 +16,11 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
       for {
         tempFile <- createTempFileWithContent("test.txt", List("line1", "line2", "line3"))
         pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile.toString)
+        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
           .via(pipeline)
           .runCollect
-        actualFilename = tempFile.toString.split("[/\\\\]").lastOption.getOrElse(tempFile.toString)
+        // Simplify filename extraction using Path.filename
+        actualFilename = tempFile.filename.toString 
         _ <- Files.deleteIfExists(tempFile)
       } yield {
         val rows = result.toList
@@ -34,7 +35,7 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
       for {
         tempFile <- createTempFileWithContent("empty.txt", List.empty)
         pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile.toString)
+        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile)
@@ -45,10 +46,11 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
       for {
         tempFile1 <- createTempFileWithContent("file1.txt", List("a", "b"))
         tempFile2 <- createTempFileWithContent("file2.txt", List("x", "y", "z"))
-        actualFilename1 = tempFile1.toString.split("[/\\\\]").lastOption.getOrElse(tempFile1.toString)
-        actualFilename2 = tempFile2.toString.split("[/\\\\]").lastOption.getOrElse(tempFile2.toString)
+        // Simplify filename extraction using Path.filename
+        actualFilename1 = tempFile1.filename.toString
+        actualFilename2 = tempFile2.filename.toString
         pipeline = FileToRowsPipeline()
-        result <- ZStream.fromIterable(List(tempFile1.toString, tempFile2.toString))
+        result <- ZStream.fromIterable(List(tempFile1, tempFile2)) // Changed to a List of Paths
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile1)
@@ -65,7 +67,7 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
       for {
         tempFile <- createTempFileWithContent("blanks.txt", List("line1", "", "line3", ""))
         pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile.toString)
+        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile)
@@ -80,7 +82,7 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
     test("should fail for non-existent file") {
       val pipeline = FileToRowsPipeline()
       assertZIO(
-        ZStream.succeed("nonexistent.txt")
+        ZStream.succeed(Path("nonexistent.txt")) // Changed to ZStream.succeed(Path)
           .via(pipeline)
           .runCollect
           .exit
@@ -94,7 +96,7 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         _ <- Files.createFile(filePath)
         _ <- Files.writeLines(filePath, List("content"))
         pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(filePath.toString)
+        result <- ZStream.succeed(filePath) // Changed to ZStream.succeed(Path)
           .via(pipeline)
           .runCollect
         _ <- cleanupTempDirectory(tempDir)
@@ -106,12 +108,11 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
     }
   )
 
-  // Helper methods for test setup
+  // Helper methods remain the same. They already return Path objects.
   private def createTempDirectory: Task[Path] =
     Files.createTempDirectory(Some("test-dir"), Seq.empty)
 
   private def createTempFileWithContent(filename: String, lines: List[String]): Task[Path] = {
-    // Extract prefix and suffix from filename properly
     val parts = filename.split("\\.")
     val prefix = if (parts.length > 1) parts.dropRight(1).mkString(".") else filename
     val suffix = if (parts.length > 1) Some(s".${parts.last}") else None
