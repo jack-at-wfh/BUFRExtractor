@@ -14,6 +14,8 @@ case class DescriptorCode(f: Int, x: Int, y: Int) {
   def isReplicationDescriptor: Boolean = f == 1
   def isOperatorDescriptor: Boolean = f == 2
   def isSequenceDescriptor: Boolean = f == 3
+
+  override def toString: String = toFXY
 }
 
 // Companion object for DescriptorCode, providing factory methods.
@@ -51,6 +53,7 @@ object DescriptorCode {
       } yield DescriptorCode(f, x, y)
     }.flatten // Flatten Option[Option[DescriptorCode]] to Option[DescriptorCode]
   }
+
 
   /**
    * Provides a convenient way to create a DescriptorCode from a 6-character FXY string.

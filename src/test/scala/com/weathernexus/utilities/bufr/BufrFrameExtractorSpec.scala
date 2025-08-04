@@ -5,6 +5,8 @@ import zio.test._
 import zio.test.Assertion._
 import zio.stream._
 
+import java.io.IOException
+
 object BufrFrameExtractorSpec extends ZIOSpecDefault {
   def bufrHeader: Chunk[Byte] = Chunk('B', 'U', 'F', 'R').map(_.toByte)
   def sentinel: Chunk[Byte] = Chunk('7', '7', '7', '7').map(_.toByte)
@@ -161,11 +163,9 @@ object BufrFrameExtractorSpec extends ZIOSpecDefault {
     }
   val extractBUFRshouldHandleStreamErrors = 
     test("extractBUFR should handle stream errors") {
-      val failingStream = ZChannel.fail(new RuntimeException("Simulated channel error")).toStream
-      
-      for {
-        result <- BufrFrameExtractor.extractBUFR(failingStream).runCollect.either
-      } yield assertTrue(result.isLeft && result.left.exists(_.getMessage == "Simulated channel error"))
+      val badStream = ZStream.fail(new IOException("Simulated file read error"))
+      val result = BufrFrameExtractor.extractBUFR(badStream).runCollect.exit
+      assertZIO(result)(fails(isSubtype[IOException](anything)))
     }
 
   def spec: Spec[Any, Throwable] = suite("BufrFrameExtractorSpec")(
