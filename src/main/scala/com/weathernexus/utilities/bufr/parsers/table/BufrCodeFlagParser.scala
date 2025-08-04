@@ -1,4 +1,4 @@
-package com.weathernexus.utilities.bufr.parsers
+package com.weathernexus.utilities.bufr.parsers.table
 
 import zio.*
 import zio.stream.*
@@ -9,7 +9,7 @@ import com.weathernexus.utilities.common.io.FileRow
 
 
 
-object BufrParserPipeline {
+object BufrCodeFlagParser {
   
   /**
    * ZPipeline: Parse FileRow instances into BufrCodeFlag case class instances

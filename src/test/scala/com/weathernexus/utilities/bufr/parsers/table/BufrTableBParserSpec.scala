@@ -7,7 +7,7 @@ import zio.test.Assertion._
 
 import com.weathernexus.utilities.bufr.descriptors.*
 
-object TableBParserSpec extends ZIOSpecDefault {
+object BufrTableBParserSpec extends ZIOSpecDefault {
 
   // Simple test data with just a few entries
   val testCsv = """ClassNo,ClassName_en,FXY,ElementName_en,BUFR_Unit,BUFR_Scale,BUFR_ReferenceValue,BUFR_DataWidth_Bits,CREX_Unit,CREX_Scale,CREX_DataWidth_Char,Note_en,noteIDs,Status
