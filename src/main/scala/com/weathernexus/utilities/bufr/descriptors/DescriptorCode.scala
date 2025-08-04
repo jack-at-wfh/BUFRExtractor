@@ -33,8 +33,8 @@ object DescriptorCode {
    * @return An Option containing the parsed DescriptorCode, or None if parsing fails or length is incorrect.
    */
 
-  implicit val encoder: JsonEncoder[DescriptorCode] = DeriveJsonEncoder.gen[DescriptorCode]
-  implicit val decoder: JsonDecoder[DescriptorCode] = DeriveJsonDecoder.gen[DescriptorCode]
+  // implicit val encoder: JsonEncoder[DescriptorCode] = DeriveJsonEncoder.gen[DescriptorCode]
+  // implicit val decoder: JsonDecoder[DescriptorCode] = DeriveJsonDecoder.gen[DescriptorCode]
 
   def fromFXY(fxyCode: String): Option[DescriptorCode] = {
     // Use Option.when to only proceed if the length is exactly 6.

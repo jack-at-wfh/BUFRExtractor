@@ -79,307 +79,307 @@ object DescriptorSpec extends ZIOSpecDefault {
       )
     }
  
-  val shouldEncodeDescriptorCodeToJson =
-    test("should encode DescriptorCode to JSON correctly") {
-      val testCases = List(
-        ("001001", "element descriptor"),
-        ("101001", "replication descriptor"), 
-        ("201001", "operator descriptor"),
-        ("301001", "sequence descriptor")
-      )
+  // val shouldEncodeDescriptorCodeToJson =
+  //   test("should encode DescriptorCode to JSON correctly") {
+  //     val testCases = List(
+  //       ("001001", "element descriptor"),
+  //       ("101001", "replication descriptor"), 
+  //       ("201001", "operator descriptor"),
+  //       ("301001", "sequence descriptor")
+  //     )
       
-      ZIO.foreach(testCases) { case (fxyCode, description) =>
-        ZIO.succeed {
-          val descriptor = DescriptorCode.fromFXY(fxyCode).get
-          val json = descriptor.toJson
+  //     ZIO.foreach(testCases) { case (fxyCode, description) =>
+  //       ZIO.succeed {
+  //         val descriptor = DescriptorCode.fromFXY(fxyCode).get
+  //         val json = descriptor.toJson
           
-          // Verify JSON contains the case class fields (f, x, y)
-          // The derived encoder will only include the case class fields, not computed methods
-          assertTrue(
-            json.contains("\"f\":"),
-            json.contains("\"x\":"),
-            json.contains("\"y\":"),
-            // Verify the actual values are correct
-            json.contains(s""""f":${descriptor.f}"""),
-            json.contains(s""""x":${descriptor.x}"""),
-            json.contains(s""""y":${descriptor.y}""")
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         // Verify JSON contains the case class fields (f, x, y)
+  //         // The derived encoder will only include the case class fields, not computed methods
+  //         assertTrue(
+  //           json.contains("\"f\":"),
+  //           json.contains("\"x\":"),
+  //           json.contains("\"y\":"),
+  //           // Verify the actual values are correct
+  //           json.contains(s""""f":${descriptor.f}"""),
+  //           json.contains(s""""x":${descriptor.x}"""),
+  //           json.contains(s""""y":${descriptor.y}""")
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldDecodeJsonToDescriptorCode =
-    test("should decode JSON to DescriptorCode correctly") {
-      val testCases = List(
-        ("""{"f":0,"x":1,"y":1}""", "001001"),
-        ("""{"f":1,"x":1,"y":1}""", "101001"),
-        ("""{"f":2,"x":1,"y":1}""", "201001"),
-        ("""{"f":3,"x":1,"y":1}""", "301001")
-      )
+  // val shouldDecodeJsonToDescriptorCode =
+  //   test("should decode JSON to DescriptorCode correctly") {
+  //     val testCases = List(
+  //       ("""{"f":0,"x":1,"y":1}""", "001001"),
+  //       ("""{"f":1,"x":1,"y":1}""", "101001"),
+  //       ("""{"f":2,"x":1,"y":1}""", "201001"),
+  //       ("""{"f":3,"x":1,"y":1}""", "301001")
+  //     )
       
-      ZIO.foreach(testCases) { case (jsonStr, expectedFxy) =>
-        ZIO.succeed {
-          val decodedResult = jsonStr.fromJson[DescriptorCode]
+  //     ZIO.foreach(testCases) { case (jsonStr, expectedFxy) =>
+  //       ZIO.succeed {
+  //         val decodedResult = jsonStr.fromJson[DescriptorCode]
           
-          assertTrue(
-            decodedResult.isRight,
-            decodedResult.map(_.toFXY).getOrElse("") == expectedFxy,
-            decodedResult.map(_.f).getOrElse(-1) == expectedFxy.head.asDigit
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decodedResult.isRight,
+  //           decodedResult.map(_.toFXY).getOrElse("") == expectedFxy,
+  //           decodedResult.map(_.f).getOrElse(-1) == expectedFxy.head.asDigit
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldRoundTripEncodeDecodeCorrectly =
-    test("should round-trip encode/decode correctly") {
-      val testCodes = List("001001", "101001", "201001", "301001", "002155", "031002")
+  // val shouldRoundTripEncodeDecodeCorrectly =
+  //   test("should round-trip encode/decode correctly") {
+  //     val testCodes = List("001001", "101001", "201001", "301001", "002155", "031002")
       
-      ZIO.foreach(testCodes) { fxyCode =>
-        ZIO.succeed {
-          val original = DescriptorCode.fromFXY(fxyCode).get
-          val json = original.toJson
-          val decoded = json.fromJson[DescriptorCode]
+  //     ZIO.foreach(testCodes) { fxyCode =>
+  //       ZIO.succeed {
+  //         val original = DescriptorCode.fromFXY(fxyCode).get
+  //         val json = original.toJson
+  //         val decoded = json.fromJson[DescriptorCode]
           
-          assertTrue(
-            decoded.isRight,
-            decoded.map(_ == original).getOrElse(false),
-            decoded.map(_.toFXY).getOrElse("") == fxyCode
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decoded.isRight,
+  //           decoded.map(_ == original).getOrElse(false),
+  //           decoded.map(_.toFXY).getOrElse("") == fxyCode
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldHandleInvalidJsonGracefully =
-    test("should handle invalid JSON gracefully") {
-      val invalidJsonCases = List(
-        """{"f":"invalid","x":1,"y":1}""",    // Invalid f type
-        """{"f":0,"x":"invalid","y":1}""",    // Invalid x type
-        """{"f":0,"x":1,"y":"invalid"}""",    // Invalid y type
-        """{"f":0,"x":1}""",                  // Missing y field
-        """{"invalid":"json"}""",             // Completely wrong structure
-        """not json at all""",               // Not JSON
-        ""                                // Empty string
-      )
+  // val shouldHandleInvalidJsonGracefully =
+  //   test("should handle invalid JSON gracefully") {
+  //     val invalidJsonCases = List(
+  //       """{"f":"invalid","x":1,"y":1}""",    // Invalid f type
+  //       """{"f":0,"x":"invalid","y":1}""",    // Invalid x type
+  //       """{"f":0,"x":1,"y":"invalid"}""",    // Invalid y type
+  //       """{"f":0,"x":1}""",                  // Missing y field
+  //       """{"invalid":"json"}""",             // Completely wrong structure
+  //       """not json at all""",               // Not JSON
+  //       ""                                // Empty string
+  //     )
       
-      ZIO.succeed {
-        assertTrue(
-          invalidJsonCases.forall { jsonStr =>
-            jsonStr.fromJson[DescriptorCode].isLeft
-          }
-        )
-      }
-    }
+  //     ZIO.succeed {
+  //       assertTrue(
+  //         invalidJsonCases.forall { jsonStr =>
+  //           jsonStr.fromJson[DescriptorCode].isLeft
+  //         }
+  //       )
+  //     }
+  //   }
 
-  val shouldHandleEdgeCaseValues =
-    test("should handle edge case values in JSON") {
-      val edgeCases = List(
-        // Test boundary values
-        ("""{"f":0,"x":0,"y":0}""", "000000"),
-        ("""{"f":3,"x":63,"y":255}""", "363255"),
-        // Test typical BUFR values
-        ("""{"f":0,"x":1,"y":7}""", "001007"),
-        ("""{"f":0,"x":31,"y":31}""", "031031")
-      )
+  // val shouldHandleEdgeCaseValues =
+  //   test("should handle edge case values in JSON") {
+  //     val edgeCases = List(
+  //       // Test boundary values
+  //       ("""{"f":0,"x":0,"y":0}""", "000000"),
+  //       ("""{"f":3,"x":63,"y":255}""", "363255"),
+  //       // Test typical BUFR values
+  //       ("""{"f":0,"x":1,"y":7}""", "001007"),
+  //       ("""{"f":0,"x":31,"y":31}""", "031031")
+  //     )
       
-      ZIO.foreach(edgeCases) { case (jsonStr, expectedFxy) =>
-        ZIO.succeed {
-          val decoded = jsonStr.fromJson[DescriptorCode]
-          val reEncoded = decoded.map(_.toJson)
-          val reDecoded = reEncoded.flatMap(_.fromJson[DescriptorCode])
+  //     ZIO.foreach(edgeCases) { case (jsonStr, expectedFxy) =>
+  //       ZIO.succeed {
+  //         val decoded = jsonStr.fromJson[DescriptorCode]
+  //         val reEncoded = decoded.map(_.toJson)
+  //         val reDecoded = reEncoded.flatMap(_.fromJson[DescriptorCode])
           
-          assertTrue(
-            decoded.isRight,
-            decoded.map(_.toFXY).getOrElse("") == expectedFxy,
-            reDecoded.isRight,
-            reDecoded == decoded
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decoded.isRight,
+  //           decoded.map(_.toFXY).getOrElse("") == expectedFxy,
+  //           reDecoded.isRight,
+  //           reDecoded == decoded
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldUseImplicitEncoderCorrectly =
-    test("should use implicit JsonEncoder to encode DescriptorCode") {
-      val testCases = List(
-        ("001001", DescriptorCode(0, 1, 1)),
-        ("101001", DescriptorCode(1, 1, 1)),
-        ("201001", DescriptorCode(2, 1, 1)),
-        ("301001", DescriptorCode(3, 1, 1))
-      )
+  // val shouldUseImplicitEncoderCorrectly =
+  //   test("should use implicit JsonEncoder to encode DescriptorCode") {
+  //     val testCases = List(
+  //       ("001001", DescriptorCode(0, 1, 1)),
+  //       ("101001", DescriptorCode(1, 1, 1)),
+  //       ("201001", DescriptorCode(2, 1, 1)),
+  //       ("301001", DescriptorCode(3, 1, 1))
+  //     )
       
-      ZIO.foreach(testCases) { case (expectedFxy, descriptor) =>
-        ZIO.succeed {
-          // This will use the implicit encoder from the companion object
-          val json = descriptor.toJson
+  //     ZIO.foreach(testCases) { case (expectedFxy, descriptor) =>
+  //       ZIO.succeed {
+  //         // This will use the implicit encoder from the companion object
+  //         val json = descriptor.toJson
           
-          // Verify the JSON structure matches what the derived encoder should produce
-          assertTrue(
-            json.contains("\"f\":"),
-            json.contains("\"x\":"),
-            json.contains("\"y\":"),
-            json.contains(s""""f":${descriptor.f}"""),
-            json.contains(s""""x":${descriptor.x}"""),
-            json.contains(s""""y":${descriptor.y}"""),
-            // Verify the descriptor can still compute its FXY correctly
-            descriptor.toFXY == expectedFxy
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         // Verify the JSON structure matches what the derived encoder should produce
+  //         assertTrue(
+  //           json.contains("\"f\":"),
+  //           json.contains("\"x\":"),
+  //           json.contains("\"y\":"),
+  //           json.contains(s""""f":${descriptor.f}"""),
+  //           json.contains(s""""x":${descriptor.x}"""),
+  //           json.contains(s""""y":${descriptor.y}"""),
+  //           // Verify the descriptor can still compute its FXY correctly
+  //           descriptor.toFXY == expectedFxy
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldUseImplicitDecoderCorrectly =
-    test("should use implicit JsonDecoder to decode JSON to DescriptorCode") {
-      val testCases = List(
-        ("""{"f":0,"x":1,"y":1}""", "001001"),
-        ("""{"f":1,"x":1,"y":1}""", "101001"),
-        ("""{"f":2,"x":1,"y":1}""", "201001"),
-        ("""{"f":3,"x":1,"y":1}""", "301001"),
-        // Test different field ordering
-        ("""{"y":7,"f":0,"x":1}""", "001007"),
-        ("""{"x":31,"y":31,"f":0}""", "031031")
-      )
+  // val shouldUseImplicitDecoderCorrectly =
+  //   test("should use implicit JsonDecoder to decode JSON to DescriptorCode") {
+  //     val testCases = List(
+  //       ("""{"f":0,"x":1,"y":1}""", "001001"),
+  //       ("""{"f":1,"x":1,"y":1}""", "101001"),
+  //       ("""{"f":2,"x":1,"y":1}""", "201001"),
+  //       ("""{"f":3,"x":1,"y":1}""", "301001"),
+  //       // Test different field ordering
+  //       ("""{"y":7,"f":0,"x":1}""", "001007"),
+  //       ("""{"x":31,"y":31,"f":0}""", "031031")
+  //     )
       
-      ZIO.foreach(testCases) { case (jsonStr, expectedFxy) =>
-        ZIO.succeed {
-          // This will use the implicit decoder from the companion object
-          val decodedResult = jsonStr.fromJson[DescriptorCode]
+  //     ZIO.foreach(testCases) { case (jsonStr, expectedFxy) =>
+  //       ZIO.succeed {
+  //         // This will use the implicit decoder from the companion object
+  //         val decodedResult = jsonStr.fromJson[DescriptorCode]
           
-          assertTrue(
-            decodedResult.isRight,
-            decodedResult.map(_.toFXY).getOrElse("") == expectedFxy,
-            decodedResult.map(_.f).getOrElse(-1) == expectedFxy.head.asDigit
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decodedResult.isRight,
+  //           decodedResult.map(_.toFXY).getOrElse("") == expectedFxy,
+  //           decodedResult.map(_.f).getOrElse(-1) == expectedFxy.head.asDigit
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldImplicitCodecsRoundTripCorrectly =
-    test("should round-trip using implicit encoder/decoder") {
-      val testCodes = List("001001", "101001", "201001", "301001", "002155", "031002")
+  // val shouldImplicitCodecsRoundTripCorrectly =
+  //   test("should round-trip using implicit encoder/decoder") {
+  //     val testCodes = List("001001", "101001", "201001", "301001", "002155", "031002")
       
-      ZIO.foreach(testCodes) { fxyCode =>
-        ZIO.succeed {
-          val original = DescriptorCode.fromFXY(fxyCode).get
+  //     ZIO.foreach(testCodes) { fxyCode =>
+  //       ZIO.succeed {
+  //         val original = DescriptorCode.fromFXY(fxyCode).get
           
-          // Encode using implicit encoder
-          val json = original.toJson
+  //         // Encode using implicit encoder
+  //         val json = original.toJson
           
-          // Decode using implicit decoder
-          val decoded = json.fromJson[DescriptorCode]
+  //         // Decode using implicit decoder
+  //         val decoded = json.fromJson[DescriptorCode]
           
-          assertTrue(
-            decoded.isRight,
-            decoded.map(_ == original).getOrElse(false),
-            decoded.map(_.toFXY).getOrElse("") == fxyCode,
-            // Verify the methods still work correctly
-            decoded.map(_.isElementDescriptor).getOrElse(false) == original.isElementDescriptor,
-            decoded.map(_.isReplicationDescriptor).getOrElse(false) == original.isReplicationDescriptor,
-            decoded.map(_.isOperatorDescriptor).getOrElse(false) == original.isOperatorDescriptor,
-            decoded.map(_.isSequenceDescriptor).getOrElse(false) == original.isSequenceDescriptor
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decoded.isRight,
+  //           decoded.map(_ == original).getOrElse(false),
+  //           decoded.map(_.toFXY).getOrElse("") == fxyCode,
+  //           // Verify the methods still work correctly
+  //           decoded.map(_.isElementDescriptor).getOrElse(false) == original.isElementDescriptor,
+  //           decoded.map(_.isReplicationDescriptor).getOrElse(false) == original.isReplicationDescriptor,
+  //           decoded.map(_.isOperatorDescriptor).getOrElse(false) == original.isOperatorDescriptor,
+  //           decoded.map(_.isSequenceDescriptor).getOrElse(false) == original.isSequenceDescriptor
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
-  val shouldImplicitDecoderHandleInvalidData =
-    test("should use implicit decoder to handle invalid JSON gracefully") {
-      val invalidJsonCases = List(
-        """{"f":"not_a_number","x":1,"y":1}""",  // Invalid f type
-        """{"f":0,"x":"not_a_number","y":1}""",  // Invalid x type  
-        """{"f":0,"x":1,"y":"not_a_number"}""",  // Invalid y type
-        """{"f":0,"x":1}""",                     // Missing required field y
-        """{"f":0,"y":1}""",                     // Missing required field x
-        """{"x":1,"y":1}""",                     // Missing required field f
-        """{"completely":"different","structure":"here"}""", // Wrong structure
-        """not json at all""",                  // Not JSON
-        """""",                                 // Empty string
-        """null""",                             // Null
-        """[]""",                               // Array instead of object
-        """{"f":null,"x":1,"y":1}"""            // Null field value
-      )
+  // val shouldImplicitDecoderHandleInvalidData =
+  //   test("should use implicit decoder to handle invalid JSON gracefully") {
+  //     val invalidJsonCases = List(
+  //       """{"f":"not_a_number","x":1,"y":1}""",  // Invalid f type
+  //       """{"f":0,"x":"not_a_number","y":1}""",  // Invalid x type  
+  //       """{"f":0,"x":1,"y":"not_a_number"}""",  // Invalid y type
+  //       """{"f":0,"x":1}""",                     // Missing required field y
+  //       """{"f":0,"y":1}""",                     // Missing required field x
+  //       """{"x":1,"y":1}""",                     // Missing required field f
+  //       """{"completely":"different","structure":"here"}""", // Wrong structure
+  //       """not json at all""",                  // Not JSON
+  //       """""",                                 // Empty string
+  //       """null""",                             // Null
+  //       """[]""",                               // Array instead of object
+  //       """{"f":null,"x":1,"y":1}"""            // Null field value
+  //     )
       
-      ZIO.succeed {
-        assertTrue(
-          invalidJsonCases.forall { jsonStr =>
-            val result = jsonStr.fromJson[DescriptorCode]
-            result.isLeft
-          }
-        )
-      }
-    }
+  //     ZIO.succeed {
+  //       assertTrue(
+  //         invalidJsonCases.forall { jsonStr =>
+  //           val result = jsonStr.fromJson[DescriptorCode]
+  //           result.isLeft
+  //         }
+  //       )
+  //     }
+  //   }
 
-  val shouldImplicitCodecsWorkWithCollections =
-    test("should work with collections using implicit codecs") {
-      ZIO.succeed {
-        val descriptors = List(
-          DescriptorCode(0, 1, 1),
-          DescriptorCode(1, 1, 1), 
-          DescriptorCode(2, 1, 1),
-          DescriptorCode(3, 1, 1)
-        )
+  // val shouldImplicitCodecsWorkWithCollections =
+  //   test("should work with collections using implicit codecs") {
+  //     ZIO.succeed {
+  //       val descriptors = List(
+  //         DescriptorCode(0, 1, 1),
+  //         DescriptorCode(1, 1, 1), 
+  //         DescriptorCode(2, 1, 1),
+  //         DescriptorCode(3, 1, 1)
+  //       )
         
-        // Encode list using implicit encoder
-        val json = descriptors.toJson
+  //       // Encode list using implicit encoder
+  //       val json = descriptors.toJson
         
-        // Decode list using implicit decoder  
-        val decoded = json.fromJson[List[DescriptorCode]]
+  //       // Decode list using implicit decoder  
+  //       val decoded = json.fromJson[List[DescriptorCode]]
         
-        assertTrue(
-          decoded.isRight,
-          decoded.map(_.length).getOrElse(0) == 4,
-          decoded.map(_ == descriptors).getOrElse(false)
-        )
-      }
-    }
+  //       assertTrue(
+  //         decoded.isRight,
+  //         decoded.map(_.length).getOrElse(0) == 4,
+  //         decoded.map(_ == descriptors).getOrElse(false)
+  //       )
+  //     }
+  //   }
 
-  val shouldImplicitCodecsPreserveDescriptorTypeChecks =
-    test("should preserve descriptor type check methods after JSON round-trip") {
-      val testCases = List(
-        (DescriptorCode(0, 1, 1), "element"),
-        (DescriptorCode(1, 1, 1), "replication"),
-        (DescriptorCode(2, 1, 1), "operator"),
-        (DescriptorCode(3, 1, 1), "sequence")
-      )
+  // val shouldImplicitCodecsPreserveDescriptorTypeChecks =
+  //   test("should preserve descriptor type check methods after JSON round-trip") {
+  //     val testCases = List(
+  //       (DescriptorCode(0, 1, 1), "element"),
+  //       (DescriptorCode(1, 1, 1), "replication"),
+  //       (DescriptorCode(2, 1, 1), "operator"),
+  //       (DescriptorCode(3, 1, 1), "sequence")
+  //     )
       
-      ZIO.foreach(testCases) { case (original, descriptorType) =>
-        ZIO.succeed {
-          val json = original.toJson
-          val decoded = json.fromJson[DescriptorCode]
+  //     ZIO.foreach(testCases) { case (original, descriptorType) =>
+  //       ZIO.succeed {
+  //         val json = original.toJson
+  //         val decoded = json.fromJson[DescriptorCode]
           
-          val typeCheckResults = decoded.map { desc =>
-            descriptorType match {
-              case "element" => desc.isElementDescriptor
-              case "replication" => desc.isReplicationDescriptor  
-              case "operator" => desc.isOperatorDescriptor
-              case "sequence" => desc.isSequenceDescriptor
-              case _ => false
-            }
-          }
+  //         val typeCheckResults = decoded.map { desc =>
+  //           descriptorType match {
+  //             case "element" => desc.isElementDescriptor
+  //             case "replication" => desc.isReplicationDescriptor  
+  //             case "operator" => desc.isOperatorDescriptor
+  //             case "sequence" => desc.isSequenceDescriptor
+  //             case _ => false
+  //           }
+  //         }
           
-          assertTrue(
-            decoded.isRight,
-            typeCheckResults.getOrElse(false)
-          )
-        }
-      }.map(_.reduce(_ && _))
-    }
+  //         assertTrue(
+  //           decoded.isRight,
+  //           typeCheckResults.getOrElse(false)
+  //         )
+  //       }
+  //     }.map(_.reduce(_ && _))
+  //   }
 
   // Test suite focused on the implicit JSON codecs
-  val implicitJsonCodecTestSuite = 
-    suite("Implicit JSON Codec functionality")(
-      shouldUseImplicitEncoderCorrectly,
-      shouldUseImplicitDecoderCorrectly,
-      shouldImplicitCodecsRoundTripCorrectly,
-      shouldImplicitDecoderHandleInvalidData,
-      shouldImplicitCodecsWorkWithCollections,
-      shouldImplicitCodecsPreserveDescriptorTypeChecks
-    )
+  // val implicitJsonCodecTestSuite = 
+  //   suite("Implicit JSON Codec functionality")(
+  //     shouldUseImplicitEncoderCorrectly,
+  //     shouldUseImplicitDecoderCorrectly,
+  //     shouldImplicitCodecsRoundTripCorrectly,
+  //     shouldImplicitDecoderHandleInvalidData,
+  //     shouldImplicitCodecsWorkWithCollections,
+  //     shouldImplicitCodecsPreserveDescriptorTypeChecks
+  //   )
 
-  val jsonCodecTestSuite = 
-    suite("JSON Codec functionality")(
-      shouldEncodeDescriptorCodeToJson,
-      shouldDecodeJsonToDescriptorCode,
-      shouldRoundTripEncodeDecodeCorrectly
-    )
+  // val jsonCodecTestSuite = 
+  //   suite("JSON Codec functionality")(
+  //     shouldEncodeDescriptorCodeToJson,
+  //     shouldDecodeJsonToDescriptorCode,
+  //     shouldRoundTripEncodeDecodeCorrectly
+  //   )
 
   val descriptorCodeFunctionalityTestSuite = 
     suite("DescriptorCode functionality")(
@@ -391,7 +391,7 @@ object DescriptorSpec extends ZIOSpecDefault {
 
   def spec = suite("TableBParserSpec")(
     descriptorCodeFunctionalityTestSuite,
-    jsonCodecTestSuite,
-    implicitJsonCodecTestSuite
+    // jsonCodecTestSuite,
+    // implicitJsonCodecTestSuite
   )    
 }

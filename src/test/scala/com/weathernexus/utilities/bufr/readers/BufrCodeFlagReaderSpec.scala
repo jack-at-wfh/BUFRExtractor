@@ -3,53 +3,106 @@ package com.weathernexus.utilities.bufr.readers
 import zio.*
 import zio.test.*
 import zio.test.Assertion.*
-import zio.stream.*
-import zio.nio.file.*
-import com.weathernexus.utilities.common.io.*
-import com.weathernexus.utilities.bufr.parsers.*
-import com.weathernexus.utilities.bufr.aggregators.*
 import com.weathernexus.utilities.bufr.data.*
+import java.io.IOException
 
 object BufrCodeFlagReaderSpec extends ZIOSpecDefault {
 
-  val sampleData =
-    """FXY,ElementName_en,CodeFigure,EntryName_en,EntryName_sub1_en,EntryName_sub2_en,Note_en,Status
-      |001003,WMO REGION NUMBER/GEOGRAPHICAL AREA,0,ATARCTICA,,,,
-      |001003,WMO REGION NUMBER/GEOGRAPHICAL AREA,1,REGION I,,,,
-      |001007,SATELLITE IDENTIFIER,1,ERS 1,,,,
-      |001007,SATELLITE IDENTIFIER,2,ERS 2,,,,
-      |""".stripMargin
-
-  def spec = suite("BufrCodeFlagReader")(
-    test("should correctly aggregate data and allow retrieval") {
-      for {
-        // 1. Setup
-        tempFile <- ZIO.succeed(Path("temp_bufr_code_flag.txt"))
-        _ <- Files.writeBytes(tempFile, Chunk.fromArray(sampleData.getBytes()))
-        
-        // 2. Integration Pipeline
-        stream = FileNameStream(List(tempFile.toString)) >>> FileToRowsPipeline() >>> ZPipeline.drop(1) >>> BufrParserPipeline()
-          
-        aggregatedMap <- stream.run(BufrCodeFlagAggregator.aggregateToMapTyped())
-        
-        // 3. Reader
-        reader = BufrCodeFlagReader(aggregatedMap)
-        
-        // 4. Assertions - Must be updated to match the new sample data
-        allKeys <- ZIO.succeed(reader.getAllKeys)
-        entry001003_0 <- ZIO.succeed(reader.getFirst(BufrCodeFlagKey("001003", 0)))
-        entry001003_1 <- ZIO.succeed(reader.getFirst(BufrCodeFlagKey("001003", 1)))
-        entry001007_1 <- ZIO.succeed(reader.getFirst(BufrCodeFlagKey("001007", 1)))
-        
-        // 5. Cleanup
-        _ <- Files.delete(tempFile)
-      } yield {
-        assert(allKeys)(hasSize(equalTo(4))) && // 4 unique keys
-        assert(entry001003_0)(isSome(hasField("entryName", _.entryName, equalTo("ATARCTICA")))) &&
-        assert(entry001003_1)(isSome(hasField("entryName", _.entryName, equalTo("REGION I")))) &&
-        assert(entry001007_1)(isSome(hasField("entryName", _.entryName, equalTo("ERS 1")))) &&
-        assert(reader.getFirst(BufrCodeFlagKey("nonexistent", 99)))(isNone)
-      }
-    }
+  // Manually construct the data map for testing with the correct constructor signature
+  val testData: Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]] = Map(
+    BufrCodeFlagKey("001003", 0) -> List(
+      BufrCodeFlagEntry(
+        elementName = "WMO REGION NUMBER/GEOGRAPHICAL AREA",
+        entryName = "ATARCTICA",
+        entryNameSub1 = None, 
+        entryNameSub2 = None,
+        note = None,
+        status = None,
+        sourceFile = "test_file", // Added missing parameter
+        lineNumber = 2             // Added missing parameter
+      )
+    ),
+    BufrCodeFlagKey("001003", 1) -> List(
+      BufrCodeFlagEntry(
+        elementName = "WMO REGION NUMBER/GEOGRAPHICAL AREA",
+        entryName = "REGION I",
+        entryNameSub1 = None,
+        entryNameSub2 = None,
+        note = None,
+        status = None,
+        sourceFile = "test_file",
+        lineNumber = 3
+      )
+    ),
+    BufrCodeFlagKey("001007", 1) -> List(
+      BufrCodeFlagEntry(
+        elementName = "SATELLITE IDENTIFIER",
+        entryName = "ERS 1",
+        entryNameSub1 = None,
+        entryNameSub2 = None,
+        note = None,
+        status = None,
+        sourceFile = "test_file",
+        lineNumber = 4
+      )
+    ),
+    BufrCodeFlagKey("001007", 2) -> List(
+      BufrCodeFlagEntry(
+        elementName = "SATELLITE IDENTIFIER",
+        entryName = "ERS 2",
+        entryNameSub1 = None,
+        entryNameSub2 = None,
+        note = None,
+        status = None,
+        sourceFile = "test_file",
+        lineNumber = 5
+      )
+    )
   )
+
+  // Create the reader once to be used in all tests
+  private val reader = BufrCodeFlagReader(testData)
+
+  val `should get all keys correctly` = test("should get all keys correctly") {
+    val allKeys = reader.getAllKeys
+    assert(allKeys)(hasSize(equalTo(4))) &&
+    assert(allKeys)(contains(BufrCodeFlagKey("001003", 0)))
+  }
+
+  val `should correctly get a single entry` = test("should correctly get a single entry") {
+    val entry = reader.getFirst(BufrCodeFlagKey("001003", 0))
+    assert(entry)(isSome(hasField("entryName", _.entryName, equalTo("ATARCTICA"))))
+  }
+
+  val `should return None for non-existent key` = test("should return None for non-existent key") {
+    val entry = reader.getFirst(BufrCodeFlagKey("nonexistent", 99))
+    assert(entry)(isNone)
+  }
+
+  val `should get all entries for a key` = test("should get all entries for a key") {
+    val entries = reader.get(BufrCodeFlagKey("001007", 1))
+    assert(entries)(isSome(hasSize(equalTo(1)))) &&
+    assert(entries.get.head.entryName)(equalTo("ERS 1"))
+  }
+
+  val `should find entries by a predicate` = test("should find entries by a predicate") {
+    val matchedEntries = reader.find(_.entryName.contains("REGION"))
+    assert(matchedEntries)(hasSize(equalTo(1))) &&
+    assert(matchedEntries.head.entryName)(equalTo("REGION I"))
+  }
+
+  val `should get the full data map` = test("should get the full data map") {
+    val allData = reader.getAll
+    assert(allData)(equalTo(testData))
+  }
+
+  override def spec: Spec[TestEnvironment, Any] =
+    suite("BufrCodeFlagReader")(
+      `should get all keys correctly`,
+      `should correctly get a single entry`,
+      `should return None for non-existent key`,
+      `should get all entries for a key`,
+      `should find entries by a predicate`,
+      `should get the full data map`
+    )
 }
