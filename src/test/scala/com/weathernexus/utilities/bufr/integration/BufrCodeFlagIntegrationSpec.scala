@@ -64,7 +64,7 @@ object BufrCodeFlagIntegrationSpec extends ZIOSpecDefault {
               )
               .via(BufrCodeFlagParser())
 
-            aggregatedMap <- stream.run(BufrCodeFlagAggregator.aggregateToMapTyped())
+            aggregatedMap <- stream.run(BufrCodeFlagAggregator.aggregateToMap())
 
           } yield {
             assert(aggregatedMap.keys)(hasSize(equalTo(5))) &&

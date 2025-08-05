@@ -19,7 +19,7 @@ trait Aggregator[T, K, E] {
    * Key: K
    * Value: List[E]
    */
-  def aggregateToMapTyped(): ZSink[Any, Nothing, T, Nothing, Map[K, List[E]]]
+  def aggregateToMap(): ZSink[Any, Nothing, T, Nothing, Map[K, List[E]]]
 
   /**
    * Must be implemented by concrete aggregators to extract the key from an element.

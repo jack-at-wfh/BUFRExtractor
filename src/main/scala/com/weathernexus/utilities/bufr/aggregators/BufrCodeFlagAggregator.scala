@@ -37,32 +37,8 @@ object BufrCodeFlagAggregator extends Aggregator[BufrCodeFlag, BufrCodeFlagKey, 
    * - `Nothing`: The sink does not emit any intermediate values.
    * - `Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]`: The final aggregated result.
    */
-  override def aggregateToMapTyped(): ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
+  override def aggregateToMap(): ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
     baseSink
-
-  /**
-   * Type-safe version of the aggregation sink that preserves the original insertion order
-   * of entries within each list.
-   *
-   * This sink ensures that the `List` of `BufrCodeFlagEntry` for each key reflects the
-   * order in which they were originally consumed from the stream.
-   *
-   * @return A `ZSink` with type-safe `BufrCodeFlagKey` keys and lists of `BufrCodeFlagEntry`
-   * in their original stream order.
-   */
-  def aggregateToMapTypedPreserveOrder(): ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
-    baseSink.map(_.view.mapValues(_.reverse).toMap)
-
-  /**
-   * Type-safe version of the aggregation sink that sorts entries by line number.
-   *
-   * For each key, the `List` of `BufrCodeFlagEntry` is sorted in ascending order
-   * based on the `lineNumber` field.
-   *
-   * @return A `ZSink` with type-safe `BufrCodeFlagKey` keys and sorted lists of entries.
-   */
-  def aggregateToMapTypedSorted(): ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
-    baseSink.map(_.view.mapValues(_.sortBy(_.lineNumber)).toMap)
 
   override protected def extractKey(element: BufrCodeFlag): BufrCodeFlagKey = 
     BufrCodeFlagKey.fromFlag(element)

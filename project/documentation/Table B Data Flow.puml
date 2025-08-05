@@ -1,0 +1,60 @@
+@startuml
+participant "FileSource" as file
+participant "ZStream" as stream
+participant "BufrTableBParser" as parser
+participant "BufrTableBAggregator" as aggregator
+participant "Map<DescriptorCode, List<BufrTableBEntry>>" as map
+participant "BufrTableBReader" as reader
+
+autonumber
+
+group Data Ingestion and Aggregation
+    file -> stream: emits chunks of FileRow
+    activate stream
+
+    stream -> parser: streams FileRow objects
+    activate parser
+    note right: ZStream.via(BufrTableBParser.parser)
+
+    parser -> parser: Parses each FileRow into BufrTableB
+    note left: Calls FileRow.content.split(...) and converts fields
+
+    parser --> stream: emits parsed BufrTableB objects
+    deactivate parser
+
+    stream -> aggregator: streams BufrTableB objects
+    activate aggregator
+    note right: ZStream.run(BufrTableBAggregator.aggregateToMapTyped())
+
+    aggregator -> aggregator: Processes each BufrTableB
+    note left: Calls BufrTableBAggregator.extractKey(element)
+    note left: Calls BufrTableBAggregator.toEntry(data)
+
+    aggregator -> map: Aggregates entries by key
+    note right: Populates Map with DescriptorCode -> List<BufrTableBEntry>
+
+    aggregator --> stream: Emits final Map once stream is exhausted
+    deactivate aggregator
+
+    stream -> map: Returns the final aggregated Map
+    deactivate stream
+end
+
+... A gap in time after aggregation ...
+
+group Data Retrieval with Reader
+    map -> reader: Instantiates BufrTableBReader
+    activate reader
+    note right: val reader = BufrTableBReader(aggregatedMap)
+
+    reader -> reader: Queries the map
+    note left: Calls reader.getFirst(key) or reader.find(predicate)
+
+    reader -> map: Performs lookup
+    note right: map.get(key) or map.values.flatten.filter(predicate)
+
+    map --> reader: Returns queried data (Option or List)
+    reader --> reader: Returns the result to the caller
+deactivate reader
+end
+@enduml

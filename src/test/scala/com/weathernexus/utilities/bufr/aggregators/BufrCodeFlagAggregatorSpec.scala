@@ -53,62 +53,6 @@ object BufrCodeFlagAggregatorSpec extends ZIOSpecDefault {
       }
     ),
 
-    suite("Type-safe aggregation tests")(
-      test("aggregateToMapTyped should handle empty stream") {
-        for {
-          result <- ZStream.empty
-            .run(BufrCodeFlagAggregator.aggregateToMapTyped())
-        } yield assert(result)(isEmpty)
-      },
-
-      test("aggregateToMapTyped should aggregate single flag") {
-        val flag = createFlag(fxy = "001001", codeFigure = 0, entryName = "Reserved")
-        val expectedKey = BufrCodeFlagKey("001001", 0)
-        
-        for {
-          result <- ZStream(flag)
-            .run(BufrCodeFlagAggregator.aggregateToMapTyped())
-        } yield {
-          assert(result)(hasSize(equalTo(1))) &&
-          assert(result.get(expectedKey))(isSome) &&
-          assert(result.get(expectedKey).get.head.entryName)(equalTo("Reserved"))
-        }
-      },
-
-      test("aggregateToMapTypedSorted should sort entries by line number") {
-        val flag1 = createFlag(fxy = "001001", codeFigure = 0, entryName = "Third", lineNumber = 15)
-        val flag2 = createFlag(fxy = "001001", codeFigure = 0, entryName = "First", lineNumber = 5)
-        val flag3 = createFlag(fxy = "001001", codeFigure = 0, entryName = "Second", lineNumber = 10)
-        val expectedKey = BufrCodeFlagKey("001001", 0)
-        
-        for {
-          result <- ZStream(flag1, flag2, flag3)
-            .run(BufrCodeFlagAggregator.aggregateToMapTypedSorted())
-        } yield {
-          val entries = result.get(expectedKey).get
-          assert(entries.map(_.entryName))(equalTo(List("First", "Second", "Third"))) &&
-          assert(entries.map(_.lineNumber))(equalTo(List(5, 10, 15)))
-        }
-      },
-
-      test("aggregateToMapTypedPreserveOrder should maintain insertion order") {
-        val flag1 = createFlag(fxy = "001001", codeFigure = 0, entryName = "First", lineNumber = 10)
-        val flag2 = createFlag(fxy = "001001", codeFigure = 0, entryName = "Second", lineNumber = 5)
-        val flag3 = createFlag(fxy = "001001", codeFigure = 0, entryName = "Third", lineNumber = 15)
-        val expectedKey = BufrCodeFlagKey("001001", 0)
-        
-        for {
-          result <- ZStream(flag1, flag2, flag3)
-            .run(BufrCodeFlagAggregator.aggregateToMapTypedPreserveOrder())
-        } yield {
-          val entries = result.get(expectedKey).get
-          // Should maintain insertion order (First, Second, Third) regardless of line numbers
-          assert(entries.map(_.entryName))(equalTo(List("First", "Second", "Third"))) &&
-          assert(entries.map(_.lineNumber))(equalTo(List(10, 5, 15)))
-        }
-      },
-    ),
-
     suite("Real BUFR data tests")(
       test("should handle real BUFR data examples") {
         val flags = List(
@@ -137,7 +81,7 @@ object BufrCodeFlagAggregatorSpec extends ZIOSpecDefault {
         
         for {
           result <- ZStream.fromIterable(flags)
-            .run(BufrCodeFlagAggregator.aggregateToMapTyped())
+            .run(BufrCodeFlagAggregator.aggregateToMap())
         } yield {
           assert(result)(hasSize(equalTo(3))) &&
           assert(result.get(BufrCodeFlagKey("001003", 0)).get.head.entryName)(equalTo("ANTARCTICA")) &&

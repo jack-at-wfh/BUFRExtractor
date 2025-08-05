@@ -47,62 +47,6 @@ object BufrTableAAggregatorSpec extends ZIOSpecDefault {
       }
     ),
 
-    suite("Type-safe aggregation tests")(
-      test("aggregateToMapTyped should handle empty stream") {
-        for {
-          result <- ZStream.empty
-            .run(BufrTableAAggregator.aggregateToMapTyped())
-        } yield assert(result)(isEmpty)
-      },
-
-      test("aggregateToMapTyped should aggregate single entry") {
-        val entry = createTableA(codeFigure = 0, meaning = "Surface data - land")
-        val expectedKey = BufrTableAKey(0)
-        
-        for {
-          result <- ZStream(entry)
-            .run(BufrTableAAggregator.aggregateToMapTyped())
-        } yield {
-          assert(result)(hasSize(equalTo(1))) &&
-          assert(result.get(expectedKey))(isSome) &&
-          assert(result.get(expectedKey).get.head.meaning)(equalTo("Surface data - land"))
-        }
-      },
-
-      test("aggregateToMapTypedSorted should sort entries by line number") {
-        val entry1 = createTableA(codeFigure = 15, meaning = "Third", lineNumber = 15)
-        val entry2 = createTableA(codeFigure = 15, meaning = "First", lineNumber = 5)
-        val entry3 = createTableA(codeFigure = 15, meaning = "Second", lineNumber = 10)
-        val expectedKey = BufrTableAKey(15)
-        
-        for {
-          result <- ZStream(entry1, entry2, entry3)
-            .run(BufrTableAAggregator.aggregateToMapTypedSorted())
-        } yield {
-          val entries = result.get(expectedKey).get
-          assert(entries.map(_.meaning))(equalTo(List("First", "Second", "Third"))) &&
-          assert(entries.map(_.lineNumber))(equalTo(List(5, 10, 15)))
-        }
-      },
-
-      test("aggregateToMapTypedPreserveOrder should maintain insertion order") {
-        val entry1 = createTableA(codeFigure = 15, meaning = "First", lineNumber = 10)
-        val entry2 = createTableA(codeFigure = 15, meaning = "Second", lineNumber = 5)
-        val entry3 = createTableA(codeFigure = 15, meaning = "Third", lineNumber = 15)
-        val expectedKey = BufrTableAKey(15)
-        
-        for {
-          result <- ZStream(entry1, entry2, entry3)
-            .run(BufrTableAAggregator.aggregateToMapTypedPreserveOrder())
-        } yield {
-          val entries = result.get(expectedKey).get
-          // Should maintain insertion order (First, Second, Third) regardless of line numbers
-          assert(entries.map(_.meaning))(equalTo(List("First", "Second", "Third"))) &&
-          assert(entries.map(_.lineNumber))(equalTo(List(10, 5, 15)))
-        }
-      }
-    ),
-
     suite("Real BUFR data tests")(
       test("should handle real BUFR Table A examples") {
         val entries = List(
@@ -128,7 +72,7 @@ object BufrTableAAggregatorSpec extends ZIOSpecDefault {
         
         for {
           result <- ZStream.fromIterable(entries)
-            .run(BufrTableAAggregator.aggregateToMapTyped())
+            .run(BufrTableAAggregator.aggregateToMap())
         } yield {
           assert(result)(hasSize(equalTo(3))) &&
           assert(result.get(BufrTableAKey(0)).get.head.meaning)(equalTo("Surface data - land")) &&
