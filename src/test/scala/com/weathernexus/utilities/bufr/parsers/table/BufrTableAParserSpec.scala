@@ -119,5 +119,5 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
         )))
       }
     }
-  )
+  ).provide(CSVParser.live)
 }

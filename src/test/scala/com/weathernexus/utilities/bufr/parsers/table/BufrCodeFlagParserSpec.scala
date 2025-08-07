@@ -140,5 +140,7 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
         assert(parsed.map(_.codeFigure))(equalTo(List(0, 1, 1)))
       }
     }
+  ).provide(
+    CSVParser.live
   )
 }

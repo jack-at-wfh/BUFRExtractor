@@ -42,7 +42,8 @@ object BufrFrameExtractorPropertySpec extends ZIOSpecDefault {
       check(genBufrStream) { bytes =>
         val input = ZStream.fromChunk(bytes)
         for {
-          result <- BufrFrameExtractor.extractBUFR(input).runCollect
+          // Use ZIO.serviceWithZIO to access the extractBUFR method on the service
+          result <- ZIO.serviceWithZIO[BufrFrameExtractor](_.extractBUFR(input).runCollect)
         } yield assert(result.forall(msg =>
           msg.startsWith(bufrHeader) && msg.endsWith(sentinel)
         ))(isTrue)
@@ -56,7 +57,8 @@ object BufrFrameExtractorPropertySpec extends ZIOSpecDefault {
         val bytes = msgs.flatten
         val input = ZStream.fromChunk(bytes)
         for {
-          result <- BufrFrameExtractor.extractBUFR(input).runCollect
+          // Use ZIO.serviceWithZIO to access the extractBUFR method on the service
+          result <- ZIO.serviceWithZIO[BufrFrameExtractor](_.extractBUFR(input).runCollect)
         } yield assert(result)(equalTo(msgs))
       }
     }
@@ -74,7 +76,8 @@ object BufrFrameExtractorPropertySpec extends ZIOSpecDefault {
       ) { bytes =>
         val input = ZStream.fromChunk(bytes)
         for {
-          result <- BufrFrameExtractor.extractBUFR(input).runCollect
+          // Use ZIO.serviceWithZIO to access the extractBUFR method on the service
+          result <- ZIO.serviceWithZIO[BufrFrameExtractor](_.extractBUFR(input).runCollect)
         } yield assert(result.forall(msg =>
           msg.startsWith(bufrHeader) && msg.endsWith(sentinel)
         ))(isTrue)
@@ -87,7 +90,8 @@ object BufrFrameExtractorPropertySpec extends ZIOSpecDefault {
       check(genBufrStream) { bytes =>
         val input = ZStream.fromChunk(bytes)
         for {
-          result <- BufrFrameExtractor.extractBUFR(input).runCollect
+          // Use ZIO.serviceWithZIO to access the extractBUFR method on the service
+          result <- ZIO.serviceWithZIO[BufrFrameExtractor](_.extractBUFR(input).runCollect)
         } yield assert(result.forall { msg =>
           // The only allowed sentinel is at the end
           val body = msg.dropRight(sentinel.length)
@@ -102,16 +106,18 @@ object BufrFrameExtractorPropertySpec extends ZIOSpecDefault {
       check(genNoise) { noise =>
         val input = ZStream.fromChunk(noise)
         for {
-          result <- BufrFrameExtractor.extractBUFR(input).runCollect
+          // Use ZIO.serviceWithZIO to access the extractBUFR method on the service
+          result <- ZIO.serviceWithZIO[BufrFrameExtractor](_.extractBUFR(input).runCollect)
         } yield assert(result)(isEmpty)
       }
     }
 
+  // The spec must provide the service's live layer to the tests.
   override def spec = suite("BufrFrameExtractor property-based tests")(
     prop_valid_message_framing,
     prop_extracts_all_messages,
     prop_ignores_noise,
     prop_no_embedded_sentinel,
     prop_nothing_extracted_from_noise
-  )
+  ).provideShared(BufrFrameExtractor.live)
 }

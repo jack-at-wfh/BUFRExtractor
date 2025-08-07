@@ -5,7 +5,7 @@ import zio.stream._
 import zio.test._
 import zio.test.Assertion._
 import com.weathernexus.utilities.bufr.data.BufrTableB
-import com.weathernexus.utilities.common.io.FileRow
+import com.weathernexus.utilities.common.io.{FileRow, CSVParser}
 import com.weathernexus.utilities.bufr.descriptors.DescriptorCode
 import java.io.IOException
 
@@ -170,5 +170,7 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
     shouldHandleQuotedFieldsWithCommas,
     shouldHandleCorruptedContentInStream,
     shouldParseNoteField
-  )
+  ).provide(
+    CSVParser.live
+    )
 }

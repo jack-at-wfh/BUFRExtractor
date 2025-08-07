@@ -75,5 +75,5 @@ object BufrCodeFlagIntegrationSpec extends ZIOSpecDefault {
           }
         }
       }
-    )
+    ).provide(CSVParser.live)
 }

@@ -11,16 +11,22 @@ import java.io.IOException
 
 object FileToRowsPipelineSpec extends ZIOSpecDefault {
 
+  // This is the combined layer all tests will use
+  private val liveLayer =
+    ZLayer.make[FileToRowsPipeline](
+      FileToRowsPipeline.live,
+      FileService.live
+    )
+
   def spec = suite("FileToRowsPipeline")(
     test("should read lines from a single file") {
       for {
         tempFile <- createTempFileWithContent("test.txt", List("line1", "line2", "line3"))
-        pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.succeed(tempFile)
           .via(pipeline)
           .runCollect
-        // Simplify filename extraction using Path.filename
-        actualFilename = tempFile.filename.toString 
+        actualFilename = tempFile.filename.toString
         _ <- Files.deleteIfExists(tempFile)
       } yield {
         val rows = result.toList
@@ -29,28 +35,27 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         assert(rows.map(_.lineNumber))(equalTo(List(1, 2, 3))) &&
         assert(rows.map(_.filename))(forall(equalTo(actualFilename)))
       }
-    },
+    }.provide(liveLayer),
 
     test("should handle empty file") {
       for {
         tempFile <- createTempFileWithContent("empty.txt", List.empty)
-        pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.succeed(tempFile)
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile)
       } yield assert(result.toList)(isEmpty)
-    },
+    }.provide(liveLayer),
 
     test("should handle multiple files") {
       for {
         tempFile1 <- createTempFileWithContent("file1.txt", List("a", "b"))
         tempFile2 <- createTempFileWithContent("file2.txt", List("x", "y", "z"))
-        // Simplify filename extraction using Path.filename
         actualFilename1 = tempFile1.filename.toString
         actualFilename2 = tempFile2.filename.toString
-        pipeline = FileToRowsPipeline()
-        result <- ZStream.fromIterable(List(tempFile1, tempFile2)) // Changed to a List of Paths
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.fromIterable(List(tempFile1, tempFile2))
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile1)
@@ -61,13 +66,13 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         assert(rows.count(_.filename == actualFilename1))(equalTo(2)) &&
         assert(rows.count(_.filename == actualFilename2))(equalTo(3))
       }
-    },
+    }.provide(liveLayer),
 
     test("should handle file with blank lines") {
       for {
         tempFile <- createTempFileWithContent("blanks.txt", List("line1", "", "line3", ""))
-        pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(tempFile) // Changed to ZStream.succeed(Path)
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.succeed(tempFile)
           .via(pipeline)
           .runCollect
         _ <- Files.deleteIfExists(tempFile)
@@ -77,16 +82,18 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         assert(rows.map(_.content))(equalTo(List("line1", "", "line3", ""))) &&
         assert(rows.map(_.lineNumber))(equalTo(List(1, 2, 3, 4)))
       }
-    },
+    }.provide(liveLayer),
 
     test("should fail for non-existent file") {
-      val pipeline = FileToRowsPipeline()
-      assertZIO(
-        ZStream.succeed(Path("nonexistent.txt")) // Changed to ZStream.succeed(Path)
+      val effect = for {
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.succeed(Path("nonexistent.txt"))
           .via(pipeline)
           .runCollect
           .exit
-      )(fails(anything))
+      } yield result
+
+      assertZIO(effect.provide(liveLayer))(fails(anything))
     },
 
     test("should extract filename correctly from full path") {
@@ -95,8 +102,8 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         filePath = tempDir / "nested-file.txt"
         _ <- Files.createFile(filePath)
         _ <- Files.writeLines(filePath, List("content"))
-        pipeline = FileToRowsPipeline()
-        result <- ZStream.succeed(filePath) // Changed to ZStream.succeed(Path)
+        pipeline <- ZIO.serviceWith[FileToRowsPipeline](_.pipeline)
+        result <- ZStream.succeed(filePath)
           .via(pipeline)
           .runCollect
         _ <- cleanupTempDirectory(tempDir)
@@ -105,10 +112,10 @@ object FileToRowsPipelineSpec extends ZIOSpecDefault {
         assert(rows)(hasSize(equalTo(1))) &&
         assert(rows.head.filename)(equalTo("nested-file.txt"))
       }
-    }
+    }.provide(liveLayer)
   )
 
-  // Helper methods remain the same. They already return Path objects.
+  // Helper methods remain the same as they already return Path objects.
   private def createTempDirectory: Task[Path] =
     Files.createTempDirectory(Some("test-dir"), Seq.empty)
 

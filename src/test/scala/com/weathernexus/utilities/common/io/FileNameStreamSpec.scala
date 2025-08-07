@@ -13,41 +13,41 @@ object FileNameStreamSpec extends ZIOSpecDefault {
     test("should emit existing files without a base path") {
       val mockFiles = List("file1.txt", "file2.txt")
       val basePath = "."
-      val existingPaths = mockFiles.map(name => Path(s"$basePath/$name")).toSet
+      // Convert the Set[Path] to a Map[Path, List[String]]
+      val existingPathsMap = mockFiles.map(name => Path(s"$basePath/$name") -> List.empty[String]).toMap
       
       val effect = FileNameStream.streamFiles.runCollect
         .provide(
           ZLayer.make[FileNameStream](
             FileNameStreamImpl.live(basePath),
             TestDirectoryReader.live(mockFiles),
-            TestFileService.live(existingPaths)
+            TestFileService.live(existingPathsMap) // Provide the new Map here
           )
         )
-
       assertZIO(effect)(equalTo(Chunk(Path("./file1.txt"), Path("./file2.txt"))))
     },
 
     test("should emit existing files with a base path") {
       val mockFiles = List("file1.txt", "file2.txt")
       val basePath = "/data"
-      val existingPaths = mockFiles.map(name => Path(s"$basePath/$name")).toSet
+      // Convert the Set[Path] to a Map[Path, List[String]]
+      val existingPathsMap = mockFiles.map(name => Path(s"$basePath/$name") -> List.empty[String]).toMap
       
       val effect = FileNameStream.streamFiles.runCollect
         .provide(
           ZLayer.make[FileNameStream](
             FileNameStreamImpl.live(basePath),
             TestDirectoryReader.live(mockFiles),
-            TestFileService.live(existingPaths)
+            TestFileService.live(existingPathsMap) // Provide the new Map here
           )
         )
-      
       assertZIO(effect)(equalTo(Chunk(Path("/data/file1.txt"), Path("/data/file2.txt"))))
     },
 
-    test("should handle an empty base path correctly") {
+    test("should correctly handle an empty base path") {
       val mockFiles = List("file1.txt")
       val basePath = ""
-      val existingPaths = mockFiles.map(Path(_)).toSet
+      val existingPaths = Map(Path("file1.txt") -> List.empty[String])
 
       val effect = FileNameStream.streamFiles.runCollect
         .provide(
@@ -62,10 +62,10 @@ object FileNameStreamSpec extends ZIOSpecDefault {
     },
 
     test("should fail with FileNotFoundException for a non-existent file") {
-      val mockFiles = List("file1.txt", "nonexistent.txt")
+      val mockFiles = List("existing.txt", "nonexistent.txt")
       val basePath = "."
       // The mock service only contains the first file, so the second one will fail the 'exists' check.
-      val existingPaths = Set(Path("./file1.txt"))
+      val existingPaths = Map(Path("./existing.txt") -> List.empty[String])
 
       val effect = FileNameStream.streamFiles.runCollect.exit
         .provide(
@@ -76,7 +76,9 @@ object FileNameStreamSpec extends ZIOSpecDefault {
           )
         )
 
+      // Use fails(isSubtype[...]) to assert that the effect fails with the expected exception
       assertZIO(effect)(fails(isSubtype[java.io.FileNotFoundException](anything)))
     }
+
   )
 }
