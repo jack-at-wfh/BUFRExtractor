@@ -90,5 +90,5 @@ object BufrCodeFlagAggregatorSpec extends ZIOSpecDefault {
         }
       }
     )
-  )
+  ).provideLayer(BufrCodeFlagAggregator.live)
 }

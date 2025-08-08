@@ -9,14 +9,14 @@ import com.weathernexus.utilities.common.io.*
 
 object BufrCodeFlagParserSpec extends ZIOSpecDefault {
 
-  def spec = suite("BufrParserPipeline")(
+  def spec = suite("BufrCodeFlagParserSpec")(
     test("should parse valid BUFR code flag row") {
       val row = FileRow("test.csv", 1, "001003,WMO REGION NUMBER/GEOGRAPHICAL AREA,0,ANTARCTICA,,,,")
-      val pipeline = BufrCodeFlagParser()
       
       for {
+        parser <- ZIO.service[BufrCodeFlagParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -35,11 +35,11 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
 
     test("should parse row with all optional fields populated") {
       val row = FileRow("test.csv", 2, "001007,SATELLITE IDENTIFIER,3,METOP-1,Sub1,Sub2,Some note,Active")
-      val pipeline = BufrCodeFlagParser()
       
       for {
+        parser <- ZIO.service[BufrCodeFlagParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -56,11 +56,11 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
 
     test("should handle CSV with quoted fields containing commas") {
       val row = FileRow("test.csv", 3, """001003,"REGION, COMPLEX NAME",1,"ENTRY, WITH COMMA",,,,""")
-      val pipeline = BufrCodeFlagParser()
       
       for {
+        parser <- ZIO.service[BufrCodeFlagParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -73,11 +73,11 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
 
     test("should handle escaped quotes in CSV fields") {
       val row = FileRow("test.csv", 4, "001003,NAME WITH \"QUOTES\",1,ENTRY,,,,")
-      val pipeline = BufrCodeFlagParser()
       
       for {
+        parser <- ZIO.service[BufrCodeFlagParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -87,38 +87,38 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
 
     test("should fail for insufficient fields") {
       val row = FileRow("test.csv", 5, "001003,NAME,1") // Only 3 fields, need at least 4
-      val pipeline = BufrCodeFlagParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrCodeFlagParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything)))
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything)))
     },
 
     test("should fail for invalid code figure") {
       val row = FileRow("test.csv", 6, "001003,NAME,INVALID,ENTRY,,,,")
-      val pipeline = BufrCodeFlagParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrCodeFlagParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything)))
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything)))
     },
 
     test("should handle header row by failing gracefully") {
       val row = FileRow("test.csv", 1, "FXY,ElementName_en,CodeFigure,EntryName_en,EntryName_sub1_en,EntryName_sub2_en,Note_en,Status")
-      val pipeline = BufrCodeFlagParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrCodeFlagParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything))) // Should fail because "CodeFigure" is not a number
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything))) // Should fail because "CodeFigure" is not a number
     },
 
     test("should process multiple rows") {
@@ -127,11 +127,11 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
         FileRow("test.csv", 3, "001003,WMO REGION,1,REGION I,,,,"),
         FileRow("test.csv", 4, "001007,SATELLITE,1,ERS 1,,,,")
       )
-      val pipeline = BufrCodeFlagParser()
       
       for {
+        parser <- ZIO.service[BufrCodeFlagParser]
         result <- ZStream.fromIterable(rows)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.toList
@@ -139,8 +139,25 @@ object BufrCodeFlagParserSpec extends ZIOSpecDefault {
         assert(parsed.map(_.fxy))(equalTo(List("001003", "001003", "001007"))) &&
         assert(parsed.map(_.codeFigure))(equalTo(List(0, 1, 1)))
       }
+    },
+
+    test("should parse using convenience pipeline method") {
+      val row = FileRow("test.csv", 1, "001003,WMO REGION,0,ANTARCTICA,,,,")
+      
+      for {
+        result <- ZStream.succeed(row)
+          .via(BufrCodeFlagParser.parsePipeline)  // Using the convenience method directly
+          .runCollect
+      } yield {
+        val parsed = result.head
+        assert(parsed.fxy)(equalTo("001003")) &&
+        assert(parsed.elementName)(equalTo("WMO REGION")) &&
+        assert(parsed.codeFigure)(equalTo(0)) &&
+        assert(parsed.entryName)(equalTo("ANTARCTICA"))
+      }
     }
   ).provide(
-    CSVParser.live
+    CSVParser.live,
+    BufrCodeFlagParser.live
   )
 }

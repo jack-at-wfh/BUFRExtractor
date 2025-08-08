@@ -47,6 +47,75 @@ object BufrTableAAggregatorSpec extends ZIOSpecDefault {
       }
     ),
 
+    suite("Aggregator service tests")(
+      test("should aggregate using service") {
+        val entries = List(
+          createTableA(codeFigure = 0, meaning = "Surface data - land", lineNumber = 1),
+          createTableA(codeFigure = 11, meaning = "BUFR tables", lineNumber = 2),
+          createTableA(codeFigure = 21, meaning = "Radiances", lineNumber = 3)
+        )
+        
+        for {
+          aggregator <- ZIO.service[BufrTableAAggregator]
+          result <- ZStream.fromIterable(entries)
+            .run(aggregator.aggregateToMap())
+        } yield {
+          assert(result)(hasSize(equalTo(3))) &&
+          assert(result.get(BufrTableAKey(0)).get.head.meaning)(equalTo("Surface data - land")) &&
+          assert(result.get(BufrTableAKey(11)).get.head.meaning)(equalTo("BUFR tables")) &&
+          assert(result.get(BufrTableAKey(21)).get.head.meaning)(equalTo("Radiances"))
+        }
+      },
+
+      test("should aggregate using convenience method") {
+        val entries = List(
+          createTableA(codeFigure = 0, meaning = "Surface data - land", lineNumber = 1),
+          createTableA(codeFigure = 11, meaning = "BUFR tables", lineNumber = 2)
+        )
+        
+        for {
+          result <- ZStream.fromIterable(entries)
+            .run(BufrTableAAggregator.aggregateToMap())
+        } yield {
+          assert(result)(hasSize(equalTo(2))) &&
+          assert(result.get(BufrTableAKey(0)).get.head.meaning)(equalTo("Surface data - land")) &&
+          assert(result.get(BufrTableAKey(11)).get.head.meaning)(equalTo("BUFR tables"))
+        }
+      },
+
+      test("should handle multiple entries with same key") {
+        val entries = List(
+          createTableA(codeFigure = 0, meaning = "First entry", sourceFile = "file1.csv", lineNumber = 1),
+          createTableA(codeFigure = 0, meaning = "Second entry", sourceFile = "file2.csv", lineNumber = 2),
+          createTableA(codeFigure = 0, meaning = "Third entry", sourceFile = "file3.csv", lineNumber = 3)
+        )
+        
+        for {
+          aggregator <- ZIO.service[BufrTableAAggregator]
+          result <- ZStream.fromIterable(entries)
+            .run(aggregator.aggregateToMap())
+        } yield {
+          val entriesForKey = result.get(BufrTableAKey(0)).get
+          assert(result)(hasSize(equalTo(1))) &&
+          assert(entriesForKey)(hasSize(equalTo(3))) &&
+          // Entries are in reverse order (last inserted first)
+          assert(entriesForKey.head.meaning)(equalTo("Third entry")) &&
+          assert(entriesForKey(1).meaning)(equalTo("Second entry")) &&
+          assert(entriesForKey(2).meaning)(equalTo("First entry"))
+        }
+      },
+
+      test("should handle empty stream") {
+        for {
+          aggregator <- ZIO.service[BufrTableAAggregator]
+          result <- ZStream.empty
+            .run(aggregator.aggregateToMap())
+        } yield {
+          assert(result)(isEmpty)
+        }
+      }
+    ),
+
     suite("Real BUFR data tests")(
       test("should handle real BUFR Table A examples") {
         val entries = List(
@@ -71,8 +140,9 @@ object BufrTableAAggregatorSpec extends ZIOSpecDefault {
         )
         
         for {
+          aggregator <- ZIO.service[BufrTableAAggregator]
           result <- ZStream.fromIterable(entries)
-            .run(BufrTableAAggregator.aggregateToMap())
+            .run(aggregator.aggregateToMap())
         } yield {
           assert(result)(hasSize(equalTo(3))) &&
           assert(result.get(BufrTableAKey(0)).get.head.meaning)(equalTo("Surface data - land")) &&
@@ -81,5 +151,7 @@ object BufrTableAAggregatorSpec extends ZIOSpecDefault {
         }
       }
     )
+  ).provide(
+    BufrTableAAggregator.live
   )
 }

@@ -70,7 +70,7 @@ object BufrFrameExtractor {
                     }
                   }
                 },
-                (err: Any) => err match {  // Still need test cases to cover this path
+                (err: Any) => err match {  // Need a test case or cases to cover this path
                   case throwable: Throwable => ZChannel.fail(throwable)
                   case other => ZChannel.fail(new RuntimeException(s"Unexpected error type: ${other.getClass.getSimpleName}: $other"))
                 },
@@ -83,7 +83,7 @@ object BufrFrameExtractor {
                   val hasCompleteMessage = endIdx >= 0
 
                   (buffer.nonEmpty, hasValidHeader, hasCompleteMessage) match {
-                    // Case 1: The buffer is not empty and contains a complete message.
+                    // Case 1: The buffer is not empty and contains a complete message - is this case even feasible?  Need a test case to cover it, if it is.
                     case (true, true, true) =>
                       val bufrMsg = afterHeader.take(endIdx + SENTINEL_LEN)
                       ZChannel.write(Chunk.single(bufrMsg))

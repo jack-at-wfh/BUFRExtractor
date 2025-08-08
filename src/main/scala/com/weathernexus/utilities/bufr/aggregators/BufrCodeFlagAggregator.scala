@@ -7,39 +7,29 @@ import com.weathernexus.utilities.bufr.parsers.*
 import com.weathernexus.utilities.bufr.aggregators.Aggregator
 import com.weathernexus.utilities.bufr.data.*
 
-object BufrCodeFlagAggregator extends Aggregator[BufrCodeFlag, BufrCodeFlagKey, BufrCodeFlagEntry] {
-  
-  override def toEntry(flag: BufrCodeFlag): BufrCodeFlagEntry =
-    BufrCodeFlagEntry(
-      elementName = flag.elementName,
-      entryName = flag.entryName,
-      entryNameSub1 = flag.entryNameSub1,
-      entryNameSub2 = flag.entryNameSub2,
-      note = flag.note,
-      status = flag.status,
-      sourceFile = flag.sourceFile,
-      lineNumber = flag.lineNumber
-    )
+trait BufrCodeFlagAggregator extends Aggregator[BufrCodeFlag, BufrCodeFlagKey, BufrCodeFlagEntry]
 
-  /**
-   * A `ZSink` that aggregates a stream of `BufrCodeFlag` instances into a `Map`
-   * with type-safe `BufrCodeFlagKey` keys.
-   *
-   * The sink processes a stream of `BufrCodeFlag`s, grouping them by their `fxy` and
-   * `codeFigure`. The resulting map's keys are `BufrCodeFlagKey` objects, and the
-   * values are lists of `BufrCodeFlagEntry`. The entries within each list are
-   * in reverse insertion order (last one seen is first in the list).
-   *
-   * @return A `ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]]`
-   * - `Any`: The sink has no environment dependencies.
-   * - `Nothing`: The sink's error channel will not fail.
-   * - `BufrCodeFlag`: The sink consumes a stream of `BufrCodeFlag` instances.
-   * - `Nothing`: The sink does not emit any intermediate values.
-   * - `Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]`: The final aggregated result.
-   */
-  override def aggregateToMap(): ZSink[Any, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
-    baseSink
+object BufrCodeFlagAggregator {
+  case class Live() extends BufrCodeFlagAggregator {
+    override def toEntry(element: BufrCodeFlag): BufrCodeFlagEntry =
+      BufrCodeFlagEntry(
+        elementName = element.elementName,
+        entryName = element.entryName,
+        entryNameSub1 = element.entryNameSub1,
+        entryNameSub2 = element.entryNameSub2,
+        note = element.note,
+        status = element.status,
+        sourceFile = element.sourceFile,
+        lineNumber = element.lineNumber
+      )
 
-  override protected def extractKey(element: BufrCodeFlag): BufrCodeFlagKey = 
-    BufrCodeFlagKey.fromFlag(element)
+    override protected def extractKey(element: BufrCodeFlag): BufrCodeFlagKey =
+      BufrCodeFlagKey.fromFlag(element)
+  }
+
+  val live: ZLayer[Any, Nothing, BufrCodeFlagAggregator] = 
+    ZLayer.succeed(Live())
+
+  def aggregateToMap(): ZSink[BufrCodeFlagAggregator, Nothing, BufrCodeFlag, Nothing, Map[BufrCodeFlagKey, List[BufrCodeFlagEntry]]] =
+    ZSink.serviceWithSink[BufrCodeFlagAggregator](_.aggregateToMap())
 }

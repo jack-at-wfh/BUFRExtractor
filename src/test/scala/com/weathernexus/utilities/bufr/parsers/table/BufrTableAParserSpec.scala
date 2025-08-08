@@ -12,11 +12,11 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
   def spec = suite("BufrTableAParser")(
     test("should parse a valid BUFR Table A row with all fields") {
       val row = FileRow("table_a.csv", 1, "0,Surface data - land,Operational")
-      val pipeline = BufrTableAParser()
       
       for {
+        parser <- ZIO.service[BufrTableAParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -30,11 +30,11 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
 
     test("should parse a valid BUFR Table A row with optional status field missing") {
       val row = FileRow("table_a.csv", 2, "13,Forecasts,")
-      val pipeline = BufrTableAParser()
       
       for {
+        parser <- ZIO.service[BufrTableAParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -46,11 +46,11 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
 
     test("should handle CSV with quoted fields containing commas") {
       val row = FileRow("table_a.csv", 3, """21,"Radiances (satellite, measured)",Operational""")
-      val pipeline = BufrTableAParser()
       
       for {
+        parser <- ZIO.service[BufrTableAParser]
         result <- ZStream.succeed(row)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.head
@@ -62,38 +62,38 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
 
     test("should fail for insufficient fields") {
       val row = FileRow("table_a.csv", 4, "99") // Only 1 field, needs at least 2
-      val pipeline = BufrTableAParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrTableAParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything)))
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything)))
     },
 
     test("should fail for invalid code figure") {
       val row = FileRow("table_a.csv", 5, "INVALID,Synoptic features,Operational")
-      val pipeline = BufrTableAParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrTableAParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything)))
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything)))
     },
 
     test("should handle header row by failing gracefully") {
       val row = FileRow("table_a.csv", 1, "CodeFigure,Meaning_en,Status")
-      val pipeline = BufrTableAParser()
       
-      assertZIO(
-        ZStream.succeed(row)
-          .via(pipeline)
+      for {
+        parser <- ZIO.service[BufrTableAParser]
+        exit <- ZStream.succeed(row)
+          .via(parser.parsePipeline)
           .runCollect
           .exit
-      )(fails(isSubtype[RuntimeException](anything))) // Fails because "CodeFigure" is not a number
+      } yield assert(exit)(fails(isSubtype[RuntimeException](anything))) // Fails because "CodeFigure" is not a number
     },
 
     test("should process multiple rows") {
@@ -102,11 +102,11 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
         FileRow("table_a.csv", 3, "1,Surface data - sea,Operational"),
         FileRow("table_a.csv", 4, "2,Vertical soundings (other than satellite),Operational")
       )
-      val pipeline = BufrTableAParser()
       
       for {
+        parser <- ZIO.service[BufrTableAParser]
         result <- ZStream.fromIterable(rows)
-          .via(pipeline)
+          .via(parser.parsePipeline)
           .runCollect
       } yield {
         val parsed = result.toList
@@ -118,6 +118,26 @@ object BufrTableAParserSpec extends ZIOSpecDefault {
           "Vertical soundings (other than satellite)"
         )))
       }
+    },
+
+    test("should parse using convenience pipeline method") {
+      val row = FileRow("table_a.csv", 1, "5,Upper-air data,Operational")
+      
+      for {
+        result <- ZStream.succeed(row)
+          .via(BufrTableAParser.parsePipeline)  // Using the convenience method directly
+          .runCollect
+      } yield {
+        val parsed = result.head
+        assert(parsed.codeFigure)(equalTo(5)) &&
+        assert(parsed.meaning)(equalTo("Upper-air data")) &&
+        assert(parsed.status)(isSome(equalTo("Operational"))) &&
+        assert(parsed.sourceFile)(equalTo("table_a.csv")) &&
+        assert(parsed.lineNumber)(equalTo(1))
+      }
     }
-  ).provide(CSVParser.live)
+  ).provide(
+    CSVParser.live,
+    BufrTableAParser.live
+  )
 }

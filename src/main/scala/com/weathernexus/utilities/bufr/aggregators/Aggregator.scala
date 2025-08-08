@@ -2,30 +2,12 @@ package com.weathernexus.utilities.bufr.aggregators
 
 import zio.stream.ZSink
 
-// Type parameters:
-// T: The input type from the stream (e.g., BufrCodeFlag)
-// K: The key type for the map (e.g., BufrCodeFlagKey)
-// E: The entry type for the list (e.g., BufrCodeFlagEntry)
 trait Aggregator[T, K, E] {
-
-  /**
-   * Transforms an input element `T` into its corresponding entry type `E`.
-   * This method must be implemented by concrete aggregators.
-   */
   def toEntry(element: T): E
-
-  /**
-   * ZSink that aggregates a stream of `T` instances into a Map with type-safe keys.
-   * Key: K
-   * Value: List[E]
-   */
-  def aggregateToMap(): ZSink[Any, Nothing, T, Nothing, Map[K, List[E]]]
-
-  /**
-   * Must be implemented by concrete aggregators to extract the key from an element.
-   */
+  def aggregateToMap(): ZSink[Any, Nothing, T, Nothing, Map[K, List[E]]] = baseSink
   protected def extractKey(element: T): K
 
+  // Common base sink implementation
   protected val baseSink: ZSink[Any, Nothing, T, Nothing, Map[K, List[E]]] =
     ZSink.foldLeft(Map.empty[K, List[E]]) { (acc, element: T) =>
       val key = extractKey(element)

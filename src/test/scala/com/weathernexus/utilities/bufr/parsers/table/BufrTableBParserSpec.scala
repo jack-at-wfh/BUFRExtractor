@@ -29,12 +29,11 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
     filename = "test_file.csv"
   )
 
-  val parser = BufrTableBParser()
-
   val shouldParseASimpleCSVLine =
     test("should parse a simple CSV line via stream") {
-      val stream = ZStream(singleTestRow).via(parser)
       for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(singleTestRow).via(parser.parsePipeline)
         entry <- stream.runHead.some
       } yield assertTrue(
         entry.classNumber == 1,
@@ -51,8 +50,9 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
 
   val shouldParseMultipleEntriesFromCSVContent =
     test("should parse multiple entries from CSV content via stream") {
-      val stream = ZStream.fromIterable(testCsvRows.tail).via(parser)
       for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream.fromIterable(testCsvRows.tail).via(parser.parsePipeline)
         entries <- stream.runCollect
       } yield assertTrue(
         entries.size == 3,
@@ -69,9 +69,12 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         lineNumber = 2,
         filename = "test_file.csv"
       )
-      val stream = ZStream(invalidRow).via(parser)
-
-      assertZIO(stream.runCollect.exit)(
+      
+      for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(invalidRow).via(parser.parsePipeline)
+        exit <- stream.runCollect.exit
+      } yield assert(exit)(
         fails(hasMessage(containsString("For input string: \"invalid\"")))
       )
     }
@@ -83,9 +86,12 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         lineNumber = 2,
         filename = "test_file.csv"
       )
-      val stream = ZStream(malformedRow).via(parser)
-
-      assertZIO(stream.runCollect.exit)(
+      
+      for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(malformedRow).via(parser.parsePipeline)
+        exit <- stream.runCollect.exit
+      } yield assert(exit)(
         fails(hasMessage(containsString("expected at least 9 fields")))
       )
     }
@@ -97,9 +103,10 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         lineNumber = 2,
         filename = "test_file.csv"
       )
-      val stream = ZStream(emptyFieldsRow).via(parser)
-
+      
       for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(emptyFieldsRow).via(parser.parsePipeline)
         entry <- stream.runHead.some
       } yield assertTrue(
         entry.note.isEmpty,
@@ -117,9 +124,10 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         lineNumber = 2,
         filename = "test_file.csv"
       )
-      val stream = ZStream(quotedRow).via(parser)
-
+      
       for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(quotedRow).via(parser.parsePipeline)
         entry <- stream.runHead.some
       } yield assertTrue(
         entry.className == "Identification, extended",
@@ -138,9 +146,11 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         FileRow(line, idx + 1, "test_file.csv")
       }
 
-      val stream = ZStream.fromIterable(rows).via(parser)
-
-      assertZIO(stream.runCollect.exit)(
+      for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream.fromIterable(rows).via(parser.parsePipeline)
+        exit <- stream.runCollect.exit
+      } yield assert(exit)(
         fails(isSubtype[RuntimeException](anything))
       )
     }
@@ -153,14 +163,16 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
         lineNumber = 2,
         filename = "test_file.csv"
       )
-      val stream = ZStream(testRowWithNote).via(parser)
-
+      
       for {
+        parser <- ZIO.service[BufrTableBParser]
+        stream = ZStream(testRowWithNote).via(parser.parsePipeline)
         entry <- stream.runHead.some
       } yield assertTrue(
         entry.note.contains("This is a test note")
       )
-    }    
+    }
+    
   def spec = suite("BufrTableBParserSpec")(
     shouldParseASimpleCSVLine,
     shouldParseMultipleEntriesFromCSVContent,
@@ -171,6 +183,7 @@ object BufrTableBParserSpec extends ZIOSpecDefault {
     shouldHandleCorruptedContentInStream,
     shouldParseNoteField
   ).provide(
-    CSVParser.live
-    )
+    CSVParser.live,
+    BufrTableBParser.live
+  )
 }

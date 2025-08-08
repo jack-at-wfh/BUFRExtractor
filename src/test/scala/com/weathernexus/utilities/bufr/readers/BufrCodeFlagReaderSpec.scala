@@ -13,7 +13,7 @@ object BufrCodeFlagReaderSpec extends ZIOSpecDefault {
     BufrCodeFlagKey("001003", 0) -> List(
       BufrCodeFlagEntry(
         elementName = "WMO REGION NUMBER/GEOGRAPHICAL AREA",
-        entryName = "ATARCTICA",
+        entryName = "ANTARCTICA",
         entryNameSub1 = None, 
         entryNameSub2 = None,
         note = None,
@@ -71,7 +71,7 @@ object BufrCodeFlagReaderSpec extends ZIOSpecDefault {
 
   val `should correctly get a single entry` = test("should correctly get a single entry") {
     val entry = reader.getFirst(BufrCodeFlagKey("001003", 0))
-    assert(entry)(isSome(hasField("entryName", _.entryName, equalTo("ATARCTICA"))))
+    assert(entry)(isSome(hasField("entryName", _.entryName, equalTo("ANTARCTICA"))))
   }
 
   val `should return None for non-existent key` = test("should return None for non-existent key") {
